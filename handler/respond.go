@@ -3,7 +3,6 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"html/template"
 	"log"
 	"net/http"
@@ -24,18 +23,6 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
 	w.Write(response)
-}
-
-// Push the given resource to the client.
-func Push(w http.ResponseWriter, resource string) {
-	err := errors.New("Push is not supported")
-	pusher, ok := w.(http.Pusher)
-	if ok {
-		if err = pusher.Push(resource, nil); err == nil {
-			return
-		}
-	}
-	log.Printf("Push warning: %v\n", err)
 }
 
 // Render a template, or server error.

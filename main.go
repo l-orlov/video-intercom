@@ -121,17 +121,6 @@ type message struct {
 	SD   webrtc.SessionDescription `json:"sd"`
 }
 
-func textGenerator() {
-	t := []string{"one", "two", "three", "four"}
-	s1 := rand.NewSource(42)
-	r1 := rand.New(s1)
-	for {
-		r := r1.Intn(4)
-		log.Println(t[r])
-		time.Sleep(1000 * time.Millisecond)
-	}
-}
-
 func handlerSDP(s *sdpServer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
@@ -203,10 +192,6 @@ func handlerSDP(s *sdpServer) http.HandlerFunc {
 
 type msg struct {
 	Text   string `json:"text"`
-	X      int    `json:"x"`
-	Y      int    `json:"y"`
-	Height int    `json:"height"`
-	Width  int    `json:"width"`
 }
 
 func addOnDataChannel(pc *webrtc.PeerConnection) {
@@ -219,9 +204,6 @@ func addOnDataChannel(pc *webrtc.PeerConnection) {
 			log.Printf("Open Data channel %s - %d\n", d.Label(), d.ID())
 
 			ticker := time.NewTicker(1 * time.Second)
-			t := []string{"one", "two", "three", "four"}
-			s1 := rand.NewSource(42)
-			r1 := rand.New(s1)
 
 			d.OnClose(func() {
 				log.Printf("Closed Data channel %s - %d.\n", d.Label(), d.ID())
@@ -230,18 +212,10 @@ func addOnDataChannel(pc *webrtc.PeerConnection) {
 
 			for range ticker.C {
 				// Send the message as text
-				text := time.Now().Format("2006-01-02 15:04:05") + " - " + t[r1.Intn(4)]
-				x := r1.Intn(200)
-				y := r1.Intn(200)
-				height := 100
-				width := 100
+				text := time.Now().Format("2006-01-02 15:04:05")
 
 				msgSent := msg{
 					Text:   text,
-					X:      x,
-					Y:      y,
-					Height: height,
-					Width:  width,
 				}
 
 				//Prepare message to be sent
@@ -303,7 +277,6 @@ func addOnTrack(pc *webrtc.PeerConnection, localTrack *webrtc.Track) {
 }
 
 func handlerJoin(w http.ResponseWriter, r *http.Request) {
-	handler.Push(w, "./static/js/join.js")
 	tpl, err := template.ParseFiles("./template/join.html")
 	if err != nil {
 		log.Printf("\nParse error: %v\n", err)
@@ -314,7 +287,6 @@ func handlerJoin(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlerPublish(w http.ResponseWriter, r *http.Request) {
-	handler.Push(w, "./static/js/publish.js")
 	tpl, err := template.ParseFiles("./template/publish.html")
 	if err != nil {
 		log.Printf("\nParse error: %v\n", err)

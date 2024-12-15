@@ -93,7 +93,6 @@ function draw(top, left, vidH, vidW){
       let json = videoContainer.json;
       // now just draw the video the correct size
       ctx.drawImage(videoContainer.video, left, top, vidW, vidH);
-      drawRectangle(ctx, json.x, json.y, json.width, json.height);
       drawText(ctx, json.text);
     }
     // all done for display 
@@ -112,12 +111,6 @@ function onMessage(e){
 //Convert object array buffer to string 
 function ab2str(buf) {
   return String.fromCharCode.apply(null, new Uint8Array(buf));
-}
-
-function drawRectangle(ctx, x, y, w, h) {
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'green';
-  ctx.strokeRect(x, y, w, h);
 }
 
 function drawText(ctx, text){
