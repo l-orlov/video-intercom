@@ -1,0 +1,16 @@
+version: '3.9'
+
+services:
+  php-server:
+    build:
+      context: ./php
+    ports:
+      - "8080:80"
+    volumes:
+      - ./php:/var/www/html
+    networks:
+      - webrtc-network
+
+networks:
+  webrtc-network:
+    driver: bridge

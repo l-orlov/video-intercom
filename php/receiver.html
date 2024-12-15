@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Receiver</title>
+</head>
+<body>
+    <h1>Receiver</h1>
+    <video id="remoteVideo" autoplay playsinline></video>
+
+    <script>
+        const signalingUrl = 'http://localhost:8080/signaling.php';
+        const remoteVideo = document.getElementById('remoteVideo');
+        const peerConnection = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' } // Google STUN server
+            ]
+        });
+
+        // Set up media stream for remote video
+        peerConnection.ontrack = event => {
+            console.log("Received remote stream:", event.streams[0]);
+            remoteVideo.srcObject = event.streams[0];
+        };
+
+        // Fetch and add ICE candidates
+        setInterval(() => {
+            fetch(`${signalingUrl}?type=candidate`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message && data.message.length > 0) {
+                        console.log("Received ICE candidates:", data.message);
+                        data.message.forEach(candidate => {
+                            peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+                                .then(() => console.log("ICE candidate added:", candidate))
+                                .catch(err => console.error("Error adding ICE candidate:", err));
+                        });
+                    }
+                });
+        }, 1000);
+
+        // Fetch SDP offer and send SDP answer
+        fetch(`${signalingUrl}?type=offer`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    peerConnection.setRemoteDescription(new RTCSessionDescription(data.message))
+                        .then(() => peerConnection.createAnswer())
+                        .then(answer => {
+                            peerConnection.setLocalDescription(answer);
+                            fetch(signalingUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ type: 'answer', message: answer })
+                            });
+                        })
+                        .then(() => console.log("SDP answer has been sent."));
+                }
+            })
+            .catch(error => console.error("Error fetching SDP offer:", error));
+    </script>
+</body>
+</html>
