@@ -1,16 +1,12 @@
-version: '3.9'
+version: '3'
 
 services:
-  php-server:
+  gowebrtc:
     build:
-      context: ./php
+      context: .
+    container_name: gowebrtc 
+    restart: always 
     ports:
-      - "8080:80"
-    volumes:
-      - ./php:/var/www/html
-    networks:
-      - webrtc-network
-
-networks:
-  webrtc-network:
-    driver: bridge
+      - 8088:8088
+    environment:
+      - LISTENINGADDR=8088
