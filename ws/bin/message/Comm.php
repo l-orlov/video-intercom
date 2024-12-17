@@ -1,5 +1,5 @@
 <?php
-namespace Amir;
+namespace Message;
 
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
