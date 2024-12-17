@@ -1,14 +1,6 @@
 <?php
 namespace Amir;
 
-/**
- * Description of Comm
- *
- * @author Amir <amirsanni@gmail.com>
- * @date 26-Oct-2016
- */
-
-
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
 

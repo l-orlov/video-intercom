@@ -1,13 +1,5 @@
 'use strict';
 
-/**
- * 
- * @author Amir <amirsanni@gmail.com>
- * @date 24-Dec-2016
- */
-
-
-
 var servers = {
     iceServers: []
 };

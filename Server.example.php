@@ -1,8 +1,4 @@
 <?php
-/**
- * @author Amir Sanni <amirsanni@gmail.com>
- * @date 4th November 2019
- */
 
 class Server
 {
