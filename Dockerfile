@@ -13,8 +13,11 @@ WORKDIR /var/www/html
 # Copy application files to the container
 COPY . /var/www/html/
 
+# Fix Git ownership issues (optional)
+RUN git config --global --add safe.directory /var/www/html
+
 # Install PHP dependencies using Composer
-RUN composer install
+RUN composer install --no-dev --optimize-autoloader
 
 # Set correct permissions for application files
 RUN chown -R www-data:www-data /var/www/html \
