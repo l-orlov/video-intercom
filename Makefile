@@ -11,4 +11,4 @@ install:
 	docker compose exec app composer install
 
 exec:
-	docker exec -it video-intercom-app /bin/sh
+	docker exec -it video_intercom_http_server /bin/sh
