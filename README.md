@@ -21,7 +21,7 @@ In second terminal:
 ```
 php -S 0.0.0.0:8888
 ```
-Then open: localhost:8888
+Then open: 0.0.0.0:8888
 
 # Run local server with docker
 In first terminal:
