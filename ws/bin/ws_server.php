@@ -9,7 +9,7 @@ use Ratchet\App;
 $allowed_origins = ['*'];
 
 // Run the server application through the WebSocket protocol on port 8080
-$app = new App('0.0.0.0', 8080, '0.0.0.0');//App(hostname, port, 'whoCanConnectIP', '')
+$app = new App('localhost', 8080, '0.0.0.0');//App(hostname, port, 'whoCanConnectIP', '')
 
 //create socket routes
 //route(uri, classInstance, arrOfAllowedOrigins)
