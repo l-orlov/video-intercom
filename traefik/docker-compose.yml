@@ -52,9 +52,9 @@ services:
       - "traefik.http.routers.httpsonly.rule=HostRegexp(`{any:.*}`)"
       - "traefik.http.routers.httpsonly.middlewares=httpsonly"
       # Traefik dashboard
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.orlovdev.ru.ru`)"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.orlovdev.ru`)"
       - "traefik.http.routers.dashboard.service=dashboard@internal"
-      - "traefik.http.routers.api.rule=Host(`traefik.orlovdev.ru.ru`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.rule=Host(`traefik.orlovdev.ru`) && PathPrefix(`/api`)"
       - "traefik.http.routers.api.service=api@internal"
       - "traefik.http.routers.dashboard.tls=true"
       - "traefik.http.routers.dashboard.tls.certresolver=myresolver"
@@ -72,7 +72,7 @@ services:
 #    container_name: "simple-service"
 #    labels:
 #      - "traefik.enable=true"
-#      - "traefik.http.routers.whoami.rule=Host(`whoami.orlovdev.ru.ru`)"
+#      - "traefik.http.routers.whoami.rule=Host(`whoami.orlovdev.ru`)"
 #      - "traefik.http.routers.whoami.entrypoints=websecure"
 #      - "traefik.http.routers.whoami.tls.certresolver=myresolver"
 #      # Basic Auth for whoami
