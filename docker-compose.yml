@@ -7,6 +7,8 @@ services:
     command: php -S 0.0.0.0:8888
     ports:
       - "8888:8888" # Expose port 8888 for the HTTP server
+    networks:
+      - traefiknet
 
   websocket-server:
     build: .
@@ -14,3 +16,10 @@ services:
     command: php ws/bin/ws_server.php
     ports:
       - "8080:8080" # Expose port 8080 for the WebSocket server
+    networks:
+      - traefiknet
+
+networks:
+  traefiknet:
+    external: true
+    name: traefiknet
