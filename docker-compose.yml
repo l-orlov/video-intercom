@@ -22,6 +22,12 @@ services:
     command: php ws/bin/ws_server.php
     ports:
       - "8080:8080" # Expose port 8080 for the WebSocket server
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.websocket-server.rule=Host(`ws.orlovdev.ru`)"
+      - "traefik.http.routers.websocket-server.entrypoints=websecure"
+      - "traefik.http.routers.websocket-server.tls.certresolver=myresolver"
+      - "traefik.http.services.websocket-server.loadbalancer.server.port=8080"
     networks:
       - traefiknet
 
