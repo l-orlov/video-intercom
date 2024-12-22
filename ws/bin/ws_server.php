@@ -13,7 +13,7 @@ $app = new App('0.0.0.0', 8080, '0.0.0.0');//App(hostname, port, 'whoCanConnectI
 
 //create socket routes
 //route(uri, classInstance, arrOfAllowedOrigins)
-$app->route('/', new Comm, $allowed_origins);
+$app->route('/comm', new Comm, $allowed_origins);
 
 //run websocket
 $app->run();
