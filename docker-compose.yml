@@ -16,6 +16,8 @@ services:
     networks:
       - traefiknet
 
+  # In remote server we use web socket with Go. This php container is not needed
+
   # websocket-server:
   #   build: .
   #   container_name: video_intercom_websocket_server
