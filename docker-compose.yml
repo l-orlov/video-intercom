@@ -28,6 +28,10 @@ services:
       - "traefik.http.routers.websocket-server.entrypoints=websecure"
       - "traefik.http.routers.websocket-server.tls.certresolver=myresolver"
       - "traefik.http.services.websocket-server.loadbalancer.server.port=8080"
+      # WebSocket-specific headers
+      - "traefik.http.middlewares.websocket-headers.headers.customRequestHeaders.Connection=Upgrade"
+      - "traefik.http.middlewares.websocket-headers.headers.customRequestHeaders.Upgrade=websocket"
+      - "traefik.http.routers.websocket.middlewares=websocket-headers"
     networks:
       - traefiknet
 
