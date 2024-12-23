@@ -43,7 +43,7 @@ func main() {
 	router.HandleFunc("/comm", handleWebSocket)
 
 	server := &http.Server{
-		Addr:    "localhost:8080", // todo: fix to 0.0.0.0:8080
+		Addr:    "0.0.0.0:8080",
 		Handler: router,
 	}
 
