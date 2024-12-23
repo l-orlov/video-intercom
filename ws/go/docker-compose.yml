@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  websocket-server:
+    # Specify that the image will be built from the Dockerfile
+    build:
+      context: .
+    # Name the container
+    container_name: websocket_server
+    # Map port 8080 to the host
+    ports:
+      - "8080:8080"
+    # Labels for integration with Traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.websocket-server.rule=Host(`ws.orlovdev.ru`) && PathPrefix(`/comm`)"
+      - "traefik.http.routers.websocket-server.entrypoints=websecure"
+      - "traefik.http.routers.websocket-server.tls.certresolver=myresolver"
+    # Connect to the external Traefik network
+    networks:
+      - traefiknet
+
+networks:
+  # Define the external Traefik network
+  traefiknet:
+    external: true
+    name: traefiknet
