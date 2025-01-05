@@ -53,13 +53,13 @@ window.addEventListener('load', function(){
             room: room
         }));
         
-        showSnackBar("Connected to the chat server!", 5000);
+        showSnackBar("Connected to the ws server!", 5000);
     };
     
 
     
     wsChat.onerror = function(){
-        showSnackBar("Unable to connect to the chat server! Kindly refresh", 20000);
+        showSnackBar("Unable to connect to the ws server! Kindly refresh", 20000);
     };
     
 
@@ -80,13 +80,6 @@ window.addEventListener('load', function(){
                     document.getElementById("rcivModal").style.display = 'block';
                     
                     document.getElementById('callerTone').play();
-                    
-                    //minimise chat pane if it is maximised to prevent it from covering the page on small screens
-                    if (!$(".icon_minim").hasClass('panel-collapsed')) {
-                        $(".icon_minim").parents('.panel').find('.panel-body').slideUp();
-                        $(".icon_minim").addClass('panel-collapsed');
-                        $(".icon_minim").removeClass('fa-minus').addClass('fa-plus');
-                    }
                     
                     break;
                     
@@ -145,26 +138,6 @@ window.addEventListener('load', function(){
                     myPC ? myPC.setRemoteDescription(new RTCSessionDescription(data.sdp)) : "";
                     
                     break;
-
-                case 'txt':
-                    //it is a text chat
-                    addRemoteChat(data.msg, data.date);
-
-                    //play msg tone
-                    document.getElementById('msgTone').play();
-                    
-                    break;
-
-                case 'typingStatus':
-                    if(data.status){
-                        document.getElementById("typingInfo").innerHTML = "Remote is typing";
-                    }
-                    
-                    else{
-                        document.getElementById("typingInfo").innerHTML = "";
-                    }
-                    
-                    break;
                     
                 case 'terminateCall'://when remote terminates call (while call is ongoing)
                     handleCallTermination();
@@ -205,73 +178,6 @@ window.addEventListener('load', function(){
         }
     };
     
-    
-
-    
-    //Indicate that user is typing
-    document.getElementById("chatInput").addEventListener('keyup', function(){
-        var msg = this.value.trim();
-        
-        //if user is typing
-        if(msg){
-            wsChat.send(JSON.stringify({
-                action: 'typingStatus',
-                status: true,
-                room: room
-            }));
-        }
-        
-        //if no text in input
-        else{
-            wsChat.send(JSON.stringify({
-                action: 'typingStatus',
-                status: false,
-                room: room
-            }));
-        }
-        
-    });
-    
-
-    
-    //TO SEND MESSAGE TO REMOTE
-    document.getElementById("chatSendBtn").addEventListener('click', function(e){
-        e.preventDefault();
-        
-        var msg = document.getElementById("chatInput").value.trim();
-        
-        if(msg){
-            var date = new Date().toLocaleTimeString();
-            
-            addLocalChat(msg, date, true);
-            
-            //clear text
-            document.getElementById("chatInput").value = "";
-            
-            return false;
-        }
-    });
-    
-
-   
-    
-    //WHEN ENTER IS PRESSED TO SEND MESSAGE
-    document.getElementById("chatInput").addEventListener('keypress', function(e){
-        var msg = this.value.trim();
-
-        if ( e.which === 13 && e.ctrlKey && msg ) {
-            this.value = `${ this.value }\n`;
-        }
-
-        else if ( e.which === 13 && !e.shiftKey && msg ) {
-            e.preventDefault();
-            document.getElementById( "chatSendBtn" ).click();
-        }
-    });
-    
-    
-
-    
     //WHEN USER CLICKS BTN TO ANSWER CALL
     //add event listener to the answer call buttons
     var answerCallElems = document.getElementsByClassName('answerCall');
@@ -310,45 +216,6 @@ window.addEventListener('load', function(){
         //enable call buttons
         enableCallBtns();
     });
-    
-
-    //TO MAXIMISE/MINIMISE THE CHAT PANE
-    $('.chat-pane').on('click', '.icon_minim', function (e) {
-        var $this = $(this);
-        
-        if (!$this.hasClass('panel-collapsed')) {
-            $this.parents('.panel').find('.panel-body').slideUp();
-            $this.addClass('panel-collapsed');
-            $this.removeClass('fa-minus').addClass('fa-plus');
-        } 
-        
-        else {
-            $this.parents('.panel').find('.panel-body').slideDown();
-            $this.removeClass('panel-collapsed');
-            $this.removeClass('fa-plus').addClass('fa-minus');
-        }
-        
-        //fix scrollbar to bottom
-        fixChatScrollBarToBottom();
-    });
-    
-
-    
-    //Maximise the chat pane when user focuses on the input and pane is collapsed
-    $('.chat-pane').on('focus', '.chat-input', function () {
-        var $this = $(this);
-        
-        if ($('#minim_chat_window').hasClass('panel-collapsed')) {
-            $this.parents('.panel').find('.panel-body').slideDown();
-            $('#minim_chat_window').removeClass('panel-collapsed');
-            $('#minim_chat_window').removeClass('fa-plus').addClass('fa-minus');
-            
-            //fix scrollbar to bottom
-            fixChatScrollBarToBottom();
-        }
-    });
-    
-
     
     //WHEN USER CLICKS TO TERMINATE THE CALL
     document.getElementById("terminateCall").addEventListener('click', function(e){
@@ -640,76 +507,6 @@ function setLocalMedia(streamConstraints, isCaller){
 
 /**
  * 
- * @param {type} msg
- * @param {type} date
- * @returns {undefined}
- */
-function addRemoteChat(msg, date){
-    new Promise(function(resolve, reject){
-        var newNode = document.createElement('div');
-        
-        newNode.className = "row msg_container base_receive";
-        
-        return resolve(newNode);
-    }).then(function(newlyCreatedNode){
-        newlyCreatedNode.innerHTML = `<div class="col-sm-10 col-xs-10">
-                <div class="messages msg_receive">
-                    <p>${nl2br(msg)}</p>
-                    <time>Remote • ${date}</time>
-                </div>
-            </div>`;
-        
-        document.getElementById('chats').appendChild(newlyCreatedNode);
-
-        //open the chat just in case it is closed
-        document.getElementById("chatInput").focus();
-
-        fixChatScrollBarToBottom();
-    });
-}
-
-/**
- * 
- * @param {type} msg
- * @param {type} date
- * @param {type} sendToPartner
- * @returns {undefined}
- */
-function addLocalChat(msg, date, sendToPartner){
-    //if msg is to be sent to partner, (meaning the msg was typed on the current browser), leave the sent status to 'busy' until
-    //it is actually sent.
-    
-    var msgId = randomString(5);//this will be used to change the sent status once it is sent (applicable if we're saving to db)
-    
-    new Promise(function(resolve, reject){
-        var newNode = document.createElement('div');
-        
-        newNode.className = "row msg_container base_sent";
-        
-        return resolve(newNode);
-    }).then(function(newlyCreatedNode){
-        newlyCreatedNode.innerHTML = `<div class="col-sm-10 col-xs-10">
-                <div class="messages msg_sent">
-                    <p>${nl2br(msg)}</p>
-                    <time>You • ${date} <i class="fa fa-clock-o sentStatus" id="${msgId}"></i></time>
-                </div>
-            </div>`;
-        
-        document.getElementById('chats').appendChild(newlyCreatedNode);
-        
-        if(sendToPartner){
-            //use this if you just want to send via socket without saving in db
-            sendChatToSocket(msg, date, msgId);
-        }
-
-        fixChatScrollBarToBottom();
-    });
-}
-
-
-
-/**
- * 
  * @param {type} desc
  * @returns {undefined}
  */
@@ -765,15 +562,6 @@ function endCall(msg, setTimeOut){
     stopMediaStream();
 }
 
-
-
-function fixChatScrollBarToBottom(){
-    var msgPane = document.getElementById("chats");
-    msgPane.scrollTop = msgPane.scrollHeight;
-}
-
-
-
 function enableCallBtns(){
     //enable dial btns and disable endcall btn
     var initCallElems = document.getElementsByClassName('initCall');
@@ -786,8 +574,6 @@ function enableCallBtns(){
     document.getElementById('record').setAttribute('disabled', true);
 }
 
-
-
 function disableCallBtns(){
     //disable dial btns and enable endall btn
     var initCallElems = document.getElementsByClassName('initCall');
@@ -799,23 +585,6 @@ function disableCallBtns(){
     document.getElementById('terminateCall').removeAttribute('disabled');
     document.getElementById('record').removeAttribute('disabled');
 }
-
-
-
-function sendChatToSocket(msg, date, msgId){
-    wsChat.send(JSON.stringify({
-        action: 'txt',
-        msg: msg,
-        date: date,
-        room: room
-    }));
-    
-    //change the sent status to indicate it has been sent
-    //$(".sentStatus").last().removeClass('fa-clock-o').addClass('fa-check text-success');
-    $("#"+msgId).removeClass('fa-clock-o').addClass('fa-check text-success');
-}
-
-
 
 function handleCallTermination(){
     myPC ? myPC.close() : "";//close connection as well
