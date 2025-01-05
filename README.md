@@ -23,6 +23,18 @@ php -S 0.0.0.0:8888
 ```
 Then open: localhost:8888
 
+# Run local server with go web socket
+In first terminal:
+```
+cd ws/go/
+go run ws_server.go
+```
+In second terminal:
+```
+php -S 0.0.0.0:8888
+```
+Then open: localhost:8888
+
 # Run local server with docker
 In first terminal:
 ```
@@ -59,8 +71,3 @@ To host this online, you'll need to set up a few things:
     `const wsUrl = 'wss://YOUR_WEB_SOCKET_DOMAIN/wss-secured';`
     
  - Please note that most browsers will not allow access to media devices except the application is running on SSL or localhost (127.0.0.1).
- 
- 
- 
- # Demo
- You can test at https://1410inc.xyz/video-call-app.
