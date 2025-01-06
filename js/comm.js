@@ -19,7 +19,7 @@ window.addEventListener('load', function(){
     wsChat = new WebSocket(`${wsUrl}/comm`);
 
 
-    //startCounter();//shows the time spent in room
+    startCounter();//shows the time spent in room
 
     //Get ice servers
     let xhr = new XMLHttpRequest();
@@ -602,8 +602,6 @@ function handleCallTermination(){
     enableCallBtns();
 }
 
-
-
 //set the status of remote (online or offline)
 function setRemoteStatus(status){
     if(status === 'online'){
@@ -616,10 +614,6 @@ function setRemoteStatus(status){
         $("#remoteStatusTxt").css({color:'red'}).html("(Offline)");
     }
 }
-
-
-
-
 
 function startCounter(){
     var sec = "00";
@@ -659,15 +653,11 @@ function startCounter(){
     }, 1000);
 }
 
-
-
 function stopMediaStream(){    
     if(myMediaStream && myMediaStream.getTracks().length){
         myMediaStream.getTracks().forEach(track => track.stop())
     }
 }
-
-
 
 function showSnackBar(msg, displayTime){
     document.getElementById('snackbar').innerHTML = msg;
@@ -677,8 +667,6 @@ function showSnackBar(msg, displayTime){
         $("#snackbar").html("").removeClass("show");
     }, displayTime);
 }
-
-
 
 /**
  * 
@@ -690,8 +678,6 @@ function randomString(length){
     
     return rand;
 }
-
-
 
 function getRoom(){
     var params = window.location.search.substr(1).split("&");
@@ -711,8 +697,6 @@ function getRoom(){
         return "";
     }
 }
-
-
 
 function saveRecordedStream(chunk){
     let blob = new Blob(chunk, {type:'video/webm'});
