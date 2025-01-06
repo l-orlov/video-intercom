@@ -56,7 +56,7 @@ window.addEventListener('load', function(){
 
         // Automatically start call if type is specified
         if (type) {
-            streamConstraints = type === "video" ? { video: true, audio: true } : { audio: true };
+            streamConstraints = type === "video" ? { video: { facingMode: 'user' }, audio: true } : { audio: true };
             startCall(true); // Start the call as the initiator
         }
     };
@@ -396,6 +396,13 @@ function startCall(isCaller){
     
         //When remote stream becomes available
         myPC.ontrack = function(e){
+            const stream = e.streams[0];
+
+            // Логирование информации о треках
+            console.log("Get stream:", stream);
+            console.log("Video tracks:", stream.getVideoTracks());
+            console.log("Audio tracks:", stream.getAudioTracks());
+
             document.getElementById("peerVid").srcObject = e.streams[0];
         };
         
@@ -456,7 +463,10 @@ function setLocalMedia(streamConstraints, isCaller){
         myMediaStream = myStream;
         
         if(isCaller){
-            myPC.createOffer().then(description, function(e){
+            myPC.createOffer({
+                offerToReceiveAudio: 1, // Явно запрашиваем аудио
+                offerToReceiveVideo: 1  // Явно запрашиваем видео
+            }).then(description, function(e){
                 console.log("Error creating offer", e.message);
                 
                 showSnackBar("Call connection failed", 15000);
@@ -471,7 +481,10 @@ function setLocalMedia(streamConstraints, isCaller){
         
         else{
             //myPC.createAnswer(description);
-            myPC.createAnswer().then(description).catch(function(e){
+            myPC.createAnswer({
+                offerToReceiveAudio: 1, // Явно запрашиваем аудио
+                offerToReceiveVideo: 1  // Явно запрашиваем видео
+            }).then(description).catch(function(e){
                 console.log("Error creating answer", e);
                 
                 showSnackBar("Call connection failed", 15000);
