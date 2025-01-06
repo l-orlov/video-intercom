@@ -115,7 +115,7 @@ wss.on('connection', (ws) => {
     });
 });
 
-const PORT = 8080;
+const PORT = 2735;
 server.listen(PORT, () => {
     console.log(`WebSocket server running on ws://0.0.0.0:${PORT}/comm`);
 });
