@@ -395,10 +395,24 @@ function startCall(isCaller){
         };
     
         //When remote stream becomes available
-        myPC.ontrack = function(e){
-            document.getElementById("peerVid").srcObject = e.streams[0];
-        };
+        // myPC.ontrack = function(e){
+        //     document.getElementById("peerVid").srcObject = e.streams[0];
+        // };
+        myPC.ontrack = function(e) {
+            const stream = e.streams[0];
         
+            // Обработка видео (если есть видеотреки)
+            if (stream.getVideoTracks().length > 0) {
+                document.getElementById("peerVid").srcObject = stream; // Устанавливаем поток видео и аудио в <video>
+            }
+            // Обработка аудио (только если нет видеотреков)
+            else if (stream.getAudioTracks().length > 0) {
+                const audioElem = document.createElement('audio');
+                audioElem.srcObject = stream;
+                audioElem.autoplay = true;
+                document.body.appendChild(audioElem); // Воспроизводим звук
+            }
+        };
         
         //when remote connection state and ice agent is closed
         myPC.oniceconnectionstatechange = function(){
