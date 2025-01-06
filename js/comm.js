@@ -12,8 +12,7 @@ let wsChat;
 var recordedChunks = [];
 var mediaRecorder = null;
 
-const room = getRoom();
-
+const { room, type } = getRoomAndType();
 
 window.addEventListener('load', function(){
     wsChat = new WebSocket(`${wsUrl}/comm`);
@@ -54,15 +53,17 @@ window.addEventListener('load', function(){
         }));
         
         showSnackBar("Connected to the ws server!", 5000);
-    };
-    
 
+        // Automatically start call if type is specified
+        if (type) {
+            streamConstraints = type === "video" ? { video: true, audio: true } : { audio: true };
+            startCall(true); // Start the call as the initiator
+        }
+    };
     
     wsChat.onerror = function(){
         showSnackBar("Unable to connect to the ws server! Kindly refresh", 20000);
     };
-    
-
     
     wsChat.onmessage = function(e){
         var data = JSON.parse(e.data);
@@ -177,7 +178,7 @@ window.addEventListener('load', function(){
             showSnackBar("Maximum of two users allowed in room. Communication disallowed", 5000);
         }
     };
-    
+
     //WHEN USER CLICKS BTN TO ANSWER CALL
     //add event listener to the answer call buttons
     var answerCallElems = document.getElementsByClassName('answerCall');
@@ -291,8 +292,12 @@ window.addEventListener('load', function(){
 });
 
 
-
-
+function getRoomAndType() {
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get("room") || "";
+    const type = params.get("type") || "";
+    return { room, type };
+}
 
 function initCall(){
     var callType = this.id === 'initVideo' ? "Video" : "Audio";
@@ -677,25 +682,6 @@ function randomString(length){
     var rand = Math.random().toString(36).slice(2).substring(0, length);
     
     return rand;
-}
-
-function getRoom(){
-    var params = window.location.search.substr(1).split("&");
-    
-    if(params){
-        for(let i = 0; i < params.length; i++){
-            var key = params[i].split("=")[0];
-            var value = params[i].split("=")[1];
-            
-            if(key === "room"){
-                return value;
-            }
-        }
-    }
-    
-    else{
-        return "";
-    }
 }
 
 function saveRecordedStream(chunk){
