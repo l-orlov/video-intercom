@@ -15,7 +15,7 @@ var mediaRecorder = null;
 const { room, type } = getRoomAndType();
 
 window.addEventListener('load', function(){
-    wsChat = new WebSocket(`${wsUrl}/comm`);
+    wsChat = new WebSocket(`${wsUrl}/`);
 
     startCounter();//shows the time spent in room
 
