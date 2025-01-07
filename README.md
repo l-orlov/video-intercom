@@ -34,11 +34,15 @@ Then open: localhost:8888
 ### Usefull commands to run on remote server
 Run ws server in background
 ```
-nohup node ws_server.js > server.log 2>&1 &
+cd ws/nodejs/ && nohup node ws_server.js > server.log 2>&1 &
 ```
 Show processes for user
 ```
 ps -u <USERNAME>
+```
+Show process by port
+```
+lsof -i :2735
 ```
 Kill process
 ```
