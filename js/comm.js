@@ -42,10 +42,8 @@ window.addEventListener('load', function(){
         
         showSnackBar("Connected to the ws server!", 5000);
 
-        // Automatically start call if type is specified
         if (type) {
             streamConstraints = type === "video" ? { video: { facingMode: 'user' }, audio: true } : { audio: true };
-            startCall(true); // Start the call as the initiator
         }
     };
     
@@ -55,13 +53,15 @@ window.addEventListener('load', function(){
     
     wsChat.onmessage = function(e){
         var data = JSON.parse(e.data);
-        
+
         if(data.room === room){
             //above check is not necessary since all messages coming to this user are for the user's current room
             //but just to be on the safe side
             switch(data.action){
                 case 'startCall':
-                    startCall(false);//to start call when callee gives the go ahead (i.e. answers call)
+                    // start call by message from server
+                    const { isCaller } = data;
+                    startCall(isCaller);
                     break;
 
                 case 'candidate':
@@ -208,6 +208,7 @@ function setLocalMedia(streamConstraints, isCaller){
             //then notify callee to start call on his end
             wsChat.send(JSON.stringify({
                 action: 'startCall',
+                isCaller: false,
                 room: room
             }));
         }

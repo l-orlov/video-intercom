@@ -43,6 +43,14 @@ class Hub {
         room.addClient(client);
         client.room = roomName;
         this.notify(roomName, client, { action: 'newSub', room: roomName });
+
+        // If there are now 2 participants in the room, initiate the call process
+        if (room.clients.size === 2) {
+            const caller = room.clients.values().next().value;
+
+            // Notify the first participant (caller) to start call
+            caller.ws.send(JSON.stringify({ action: 'startCall', isCaller: true, room: roomName }));
+        }
     }
 
     unsubscribe(client) {
