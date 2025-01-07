@@ -52,8 +52,14 @@
 
                     return room ? resolve(room) : reject(new Error("Could not create room"));
                 }).then(function(room){
-                    var roomLink =appRoot+"comm.html?room="+room+"&type=video";
-                    linkInput.innerHTML = '<a href="'+roomLink+'" target="_blank">Enter Room</a>';
+                    var videoLink = appRoot + "comm.html?room=" + room + "&type=video";
+                    var audioLink = appRoot + "comm.html?room=" + room + "&type=audio";
+                    
+                    linkInput.innerHTML = `
+                        <a href="${videoLink}" target="_blank">Join with Video</a>
+                        <br><br>
+                        <a href="${audioLink}" target="_blank">Join with Audio</a>
+                    `;
                 }).catch(function(err){
                     linkInput.innerHTML = err;
                 });
