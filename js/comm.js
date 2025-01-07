@@ -114,59 +114,6 @@ window.addEventListener('load', function(){
             showSnackBar("Maximum of two users allowed in room. Communication disallowed", 5000);
         }
     };
-
-    //WHEN USER CLICKS BTN TO ANSWER CALL
-    //add event listener to the answer call buttons
-    var answerCallElems = document.getElementsByClassName('answerCall');
-    
-    for (var i = 0; i < answerCallElems.length; i++) {
-        answerCallElems[i].addEventListener('click', answerCall);
-    }
-    
-    document.getElementById('record').addEventListener('click', (e)=>{
-        if(myMediaStream && myMediaStream.getTracks().length){
-            if(mediaRecorder && mediaRecorder.state == 'recording'){
-                //stop recording
-                mediaRecorder.stop();
-
-                e.setAttribute('title', 'Record');
-                e.target.classList.remove('btn-danger');
-            }
-
-            else{
-                //start recording
-                mediaRecorder = new MediaRecorder(myMediaStream, {
-                    mimeType: 'video/webm;codecs=vp9'
-                });
-    
-                mediaRecorder.start(1000);
-
-                //change the button to reflect that recording has started
-                e.setAttribute('title', 'Stop recording');
-                e.target.classList.add('btn-danger');
-    
-                mediaRecorder.ondataavailable = function(e){
-                    recordedChunks.push(e.data);
-                }
-    
-                mediaRecorder.onstop = function(){
-                    saveRecordedStream(recordedChunks);
-    
-                    setTimeout(()=>{
-                        recordedChunks = [];
-                    }, 3000);
-                }
-    
-                mediaRecorder.onerror = function(e){
-                    console.error(e);
-                }
-            }
-        }
-
-        else{
-            showSnackBar('Nothing to record', 5000);
-        }
-    });
 });
 
 
@@ -175,40 +122,6 @@ function getRoomAndType() {
     const room = params.get("room") || "";
     const type = params.get("type") || "";
     return { room, type };
-}
-
-function answerCall(){
-    //check whether user can use webrtc and use that to determine the response to send
-    if(checkUserMediaSupport){
-        //set media constraints based on the button clicked. Audio only should be initiated by default
-        streamConstraints = this.id === 'startVideo' ? {video:{facingMode:'user'}, audio:true} : {audio:true};
-
-        //show msg that we're setting up call (i.e. locating servers)
-        document.getElementById("calleeInfo").innerHTML = "<i class='"+spinnerClass+"'></i> Setting up call...";
-
-        //uncomment the lines below if you comment out the get request above
-        startCall(true);
-
-        //dismiss modal
-        document.getElementById("rcivModal").style.display = 'none';
-    }
-
-    else{
-        //inform caller and current user (i.e. receiver) that he cannot use webrtc, then dismiss modal after a while
-        wsChat.send(JSON.stringify({
-            action: 'callRejected',
-            msg: "Remote's device does not have the necessary requirements to make call",
-            room: room
-        }));
-
-        document.getElementById("calleeInfo").innerHTML = "Your browser/device does not meet the minimum requirements needed to make a call";
-
-        setTimeout(function(){
-            document.getElementById("rcivModal").style.display = 'none';
-        }, 3000);
-    }
-
-    document.getElementById('callerTone').pause();
 }
 
 function startCall(isCaller){
@@ -423,12 +336,4 @@ function showSnackBar(msg, displayTime){
     setTimeout(function(){
         $("#snackbar").html("").removeClass("show");
     }, displayTime);
-}
-
-function saveRecordedStream(chunk){
-    let blob = new Blob(chunk, {type:'video/webm'});
-
-    let file = new File([blob], `__${moment().unix()}-record.webm`);
-
-    saveAs(file);
 }
