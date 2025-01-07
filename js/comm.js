@@ -67,8 +67,6 @@ window.addEventListener('load', function(){
                     
                     clearTimeout(awaitingResponse);//clear timeout
                     
-                    //stop tone
-                    document.getElementById('callerTone').pause();
                     break;
 
                 case 'candidate':
