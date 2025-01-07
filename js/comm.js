@@ -105,7 +105,6 @@ window.addEventListener('load', function(){
                     setRemoteStatus('offline');
         
                     showSnackBar("Remote left room", 10000);
-                    enableCallBtns();
                     break;
             }  
         }
@@ -192,10 +191,6 @@ function answerCall(){
 
         //dismiss modal
         document.getElementById("rcivModal").style.display = 'none';
-
-        //enable the terminateCall btn
-        disableCallBtns();
-
     }
 
     else{
@@ -368,30 +363,6 @@ function description(desc){
         sdp: desc,
         room: room
     }));
-}
-
-function enableCallBtns(){
-    //enable dial btns and disable endcall btn
-    var initCallElems = document.getElementsByClassName('initCall');
-    
-    for(let i = 0; i < initCallElems.length; i++){
-        initCallElems[i].removeAttribute('disabled');
-    }
-    
-    document.getElementById('terminateCall').setAttribute('disabled', true);
-    document.getElementById('record').setAttribute('disabled', true);
-}
-
-function disableCallBtns(){
-    //disable dial btns and enable endall btn
-    var initCallElems = document.getElementsByClassName('initCall');
-    
-    for(let i = 0; i < initCallElems.length; i++){
-        initCallElems[i].setAttribute('disabled', true);
-    }
-    
-    document.getElementById('terminateCall').removeAttribute('disabled');
-    document.getElementById('record').removeAttribute('disabled');
 }
 
 //set the status of remote (online or offline)
