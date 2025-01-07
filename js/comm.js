@@ -34,16 +34,12 @@ window.addEventListener('load', function(){
     xhr.open("GET", appRoot+"Server.php", true);
     xhr.send();
     
-
-    
     //add event listeners to the dial buttons
     var initCallElems = document.getElementsByClassName('initCall');
     
     for (var i = 0; i < initCallElems.length; i++) {
         initCallElems[i].addEventListener('click', initCall);
     }
-    
-
     
     wsChat.onopen = function(){
         //subscribe to room
@@ -397,13 +393,7 @@ function startCall(isCaller){
         //When remote stream becomes available
         myPC.ontrack = function(e){
             const stream = e.streams[0];
-
-            // Логирование информации о треках
-            console.log("Get stream:", stream);
-            console.log("Video tracks:", stream.getVideoTracks());
-            console.log("Audio tracks:", stream.getAudioTracks());
-
-            document.getElementById("peerVid").srcObject = e.streams[0];
+            document.getElementById("peerVid").srcObject = stream;
         };
         
         //when remote connection state and ice agent is closed
@@ -464,8 +454,8 @@ function setLocalMedia(streamConstraints, isCaller){
         
         if(isCaller){
             myPC.createOffer({
-                offerToReceiveAudio: 1, // Явно запрашиваем аудио
-                offerToReceiveVideo: 1  // Явно запрашиваем видео
+                offerToReceiveAudio: 1, // Explicitly request audio
+                offerToReceiveVideo: 1  // Explicitly request video
             }).then(description, function(e){
                 console.log("Error creating offer", e.message);
                 
@@ -482,8 +472,8 @@ function setLocalMedia(streamConstraints, isCaller){
         else{
             //myPC.createAnswer(description);
             myPC.createAnswer({
-                offerToReceiveAudio: 1, // Явно запрашиваем аудио
-                offerToReceiveVideo: 1  // Явно запрашиваем видео
+                offerToReceiveAudio: 1, // Explicitly request audio
+                offerToReceiveVideo: 1  // Explicitly request video
             }).then(description).catch(function(e){
                 console.log("Error creating answer", e);
                 
@@ -685,29 +675,10 @@ function showSnackBar(msg, displayTime){
     }, displayTime);
 }
 
-/**
- * 
- * @param {type} length
- * @returns {String}
- */
-function randomString(length){
-    var rand = Math.random().toString(36).slice(2).substring(0, length);
-    
-    return rand;
-}
-
 function saveRecordedStream(chunk){
     let blob = new Blob(chunk, {type:'video/webm'});
 
     let file = new File([blob], `__${moment().unix()}-record.webm`);
 
     saveAs(file);
-}
-
-function nl2br( str, is_xhtml ) {
-    if ( typeof str === 'undefined' || str === null ) {
-        return '';
-    }
-    var breakTag = ( is_xhtml || typeof is_xhtml === 'undefined' ) ? '<br />' : '<br>';
-    return ( str + '' ).replace( /([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1' + breakTag + '$2' );
 }
