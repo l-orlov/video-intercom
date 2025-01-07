@@ -17,7 +17,6 @@ const { room, type } = getRoomAndType();
 window.addEventListener('load', function(){
     wsChat = new WebSocket(`${wsUrl}/comm`);
 
-
     startCounter();//shows the time spent in room
 
     //Get ice servers
@@ -33,13 +32,6 @@ window.addEventListener('load', function(){
 
     xhr.open("GET", appRoot+"Server.php", true);
     xhr.send();
-    
-    //add event listeners to the dial buttons
-    var initCallElems = document.getElementsByClassName('initCall');
-    
-    for (var i = 0; i < initCallElems.length; i++) {
-        initCallElems[i].addEventListener('click', initCall);
-    }
     
     wsChat.onopen = function(){
         //subscribe to room
@@ -68,18 +60,6 @@ window.addEventListener('load', function(){
             //above check is not necessary since all messages coming to this user are for the user's current room
             //but just to be on the safe side
             switch(data.action){
-                case 'initCall':
-                    //launch modal to show that user has a call with options to accept or deny and start ringtone
-                    //start ringtone here
-                    document.getElementById('calleeInfo').style.color = 'black';
-                    document.getElementById('calleeInfo').innerHTML = data.msg;
-                    
-                    document.getElementById("rcivModal").style.display = 'block';
-                    
-                    document.getElementById('callerTone').play();
-                    
-                    break;
-                    
                 case 'startCall':
                     startCall(false);//to start call when callee gives the go ahead (i.e. answers call)
                     
@@ -196,47 +176,6 @@ function getRoomAndType() {
     const room = params.get("room") || "";
     const type = params.get("type") || "";
     return { room, type };
-}
-
-function initCall(){
-    var callType = this.id === 'initVideo' ? "Video" : "Audio";
-    var callerInfo = document.getElementById('callerInfo');
-        
-    //launch calling modal and await receiver's response by sending initCall to him (i.e. receiver)
-    if(checkUserMediaSupport){
-        //set media constraints based on the button clicked. Audio only should be initiated by default
-        streamConstraints = callType === 'Video' ? {video:{facingMode:'user'}, audio:true} : {audio:true};
-
-        //set message to display on the call dialog
-        callerInfo.style.color = 'black';
-        callerInfo.innerHTML = callType === 'Video' ? 'Video call to Remote' : 'Audio call to Remote';
-
-        //start calling tone
-        document.getElementById('callerTone').play();
-
-        //notify callee that we're calling. Don't call startCall() yet
-        wsChat.send(JSON.stringify({
-            action: 'initCall',
-            msg: callType === 'Video' ? "Video call from remote" : "Audio call from remote",
-            room: room
-        }));
-
-        //disable call buttons
-        disableCallBtns();
-
-        //wait for response for 30secs
-        awaitingResponse = setTimeout(function(){
-            endCall("Call ended due to lack of response", true);
-        }, 30000);
-    }
-
-    else{
-        callerInfo.style.color = 'red';
-        callerInfo.innerHTML = "Your browser/device does not have the capability to make call";
-    }
-
-
-    document.getElementById("callModal").style.display = 'block';
 }
 
 function answerCall(){
