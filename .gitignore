@@ -1,3 +1,4 @@
 Server.php
+config.js
 /vendor/
 *node_modules*
