@@ -80,39 +80,6 @@ window.addEventListener('load', function(){
                     
                     break;
                     
-                case 'callRejected':
-                    //get response to call initiation (if user is the initiator)
-                    //show received message (i.e. reason for rejection) and end call
-                    document.getElementById("callerInfo").style.color = 'red';
-                    document.getElementById("callerInfo").innerHTML = data.msg;
-
-                    setTimeout(function(){
-                        document.getElementById("callModal").style.display = 'none';
-                    }, 3000);
-                    
-                    //stop tone
-                    document.getElementById('callerTone').pause();
-                    
-                    //enable call buttons
-                    enableCallBtns();
-                    
-                    break;
-                    
-                case 'endCall':
-                    //i.e. when the caller ends the call from his end (after dialing and before recipient respond)
-                    //End call
-                    document.getElementById("calleeInfo").style.color = 'red';
-                    document.getElementById("calleeInfo").innerHTML = data.msg;
-
-                    setTimeout(function(){
-                        document.getElementById("rcivModal").style.display = 'none';
-                    }, 3000);
-                    
-                    //stop tone
-                    document.getElementById('callerTone').pause();
-                    
-                    break;
-                    
                 case 'startCall':
                     startCall(false);//to start call when callee gives the go ahead (i.e. answers call)
                     
@@ -134,12 +101,6 @@ window.addEventListener('load', function(){
                     //message is signal description
                     myPC ? myPC.setRemoteDescription(new RTCSessionDescription(data.sdp)) : "";
                     
-                    break;
-                    
-                case 'terminateCall'://when remote terminates call (while call is ongoing)
-                    handleCallTermination();
-                    //play termination tone
-                    //document.getElementById('terminationTone').play();
                     break;
                     
                 case 'newSub':
@@ -182,64 +143,6 @@ window.addEventListener('load', function(){
     for (var i = 0; i < answerCallElems.length; i++) {
         answerCallElems[i].addEventListener('click', answerCall);
     }
-    
-    
-
-    
-    //TO REJECT CALL
-    document.getElementById("rejectCall").addEventListener('click', function(e){
-        e.preventDefault();
-        
-        wsChat.send(JSON.stringify({
-            action: 'callRejected',
-            msg: "Call rejected by Remote",
-            room: room
-        }));
-        
-        document.getElementById("rcivModal").style.display = 'none';
-        
-        document.getElementById('callerTone').pause();
-    });
-    
-    
-
-    
-    //WHEN THE CALLER CLICK TO END THE CALL
-    document.getElementById("endCall").addEventListener('click', function(e){
-        e.preventDefault();
-        
-        endCall("Call ended by remote", false);
-        
-        //enable call buttons
-        enableCallBtns();
-    });
-    
-    //WHEN USER CLICKS TO TERMINATE THE CALL
-    document.getElementById("terminateCall").addEventListener('click', function(e){
-        e.preventDefault();
-        
-        //close the connection
-        myPC ? myPC.close() : "";
-        
-        //stop media stream
-        stopMediaStream();
-        
-        //remove video playback src
-        //$('video').attr('src', appRoot+'img/vidbg.png');
-        document.querySelectorAll('video').src = appRoot+'img/vidbg.png';
-        
-        //inform peer to also end the connection
-        wsChat.send(JSON.stringify({
-            action: 'terminateCall',
-            room: room
-        }));
-        
-        //enable call buttons
-        enableCallBtns();
-    });
-    
-
-
     
     document.getElementById('record').addEventListener('click', (e)=>{
         if(myMediaStream && myMediaStream.getTracks().length){
@@ -528,47 +431,6 @@ function description(desc){
     }));
 }
 
-
-
-/**
- * 
- * @param {type} msg
- * @param {type} setTimeOut
- * @returns {undefined}
- */
-function endCall(msg, setTimeOut){
-    wsChat.send(JSON.stringify({
-        action: 'endCall',
-        msg: msg,
-        room: room
-    }));
-
-    if(setTimeOut){
-        //display message
-        document.getElementById("callerInfo").style.color = 'red';
-        document.getElementById.innerHTML = "<i class='fa fa-exclamation-triangle'></i> No response";
-        
-        setTimeout(function(){
-            document.getElementById("callModal").style.display = 'none';
-        }, 3000);
-        
-        enableCallBtns();
-    }
-    
-    else{
-        document.getElementById("callModal").style.display = 'none';
-    }
-    
-    clearTimeout(awaitingResponse);
-
-    document.getElementById('callerTone').pause();
-
-    //disable the record button
-    document.getElementById('record').removeAttribute('disabled');
-
-    stopMediaStream();
-}
-
 function enableCallBtns(){
     //enable dial btns and disable endcall btn
     var initCallElems = document.getElementsByClassName('initCall');
@@ -591,22 +453,6 @@ function disableCallBtns(){
     
     document.getElementById('terminateCall').removeAttribute('disabled');
     document.getElementById('record').removeAttribute('disabled');
-}
-
-function handleCallTermination(){
-    myPC ? myPC.close() : "";//close connection as well
-                    
-    //tell user that remote terminated call
-    showSnackBar("Call terminated by remote", 10000);
-
-    //remove streams and free media devices
-    stopMediaStream();
-    
-    //remove video playback src
-    $('video').attr('src', appRoot+'img/vidbg.png');
-
-    //enable 'call' button and disable 'terminate call' btn
-    enableCallBtns();
 }
 
 //set the status of remote (online or offline)
@@ -658,12 +504,6 @@ function startCounter(){
         }
         
     }, 1000);
-}
-
-function stopMediaStream(){    
-    if(myMediaStream && myMediaStream.getTracks().length){
-        myMediaStream.getTracks().forEach(track => track.stop())
-    }
 }
 
 function showSnackBar(msg, displayTime){
