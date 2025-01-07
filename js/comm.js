@@ -62,11 +62,6 @@ window.addEventListener('load', function(){
             switch(data.action){
                 case 'startCall':
                     startCall(false);//to start call when callee gives the go ahead (i.e. answers call)
-                    
-                    document.getElementById("callModal").style.display = 'none';//hide call modal
-                    
-                    clearTimeout(awaitingResponse);//clear timeout
-                    
                     break;
 
                 case 'candidate':
@@ -78,7 +73,7 @@ window.addEventListener('load', function(){
                 case 'sdp':
                     //message is signal description
                     myPC ? myPC.setRemoteDescription(new RTCSessionDescription(data.sdp)) : "";
-                    
+
                     break;
                     
                 case 'newSub':
