@@ -96,8 +96,10 @@ window.addEventListener('load', function(){
                     
                 case 'imOffline':
                     setRemoteStatus('offline');
-        
+                    // Show message
                     showSnackBar("Remote left room", 10000);
+                    // Terminate call
+                    handleCallTermination();
                     break;
             }  
         }
@@ -330,4 +332,23 @@ function showSnackBar(msg, displayTime){
     setTimeout(function(){
         $("#snackbar").html("").removeClass("show");
     }, displayTime);
+}
+
+function handleCallTermination(){
+    myPC ? myPC.close() : "";//close connection as well
+                    
+    //tell user that remote terminated call
+    showSnackBar("Call terminated by remote", 10000);
+
+    //remove streams and free media devices
+    stopMediaStream();
+    
+    //remove video playback src
+    $('video').attr('src', appRoot+'img/vidbg.png');
+}
+
+function stopMediaStream(){    
+    if(myMediaStream && myMediaStream.getTracks().length){
+        myMediaStream.getTracks().forEach(track => track.stop())
+    }
 }
