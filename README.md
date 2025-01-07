@@ -1,7 +1,7 @@
 # Video Call App
 A one-to-one audio and video calls application built with WebRTC and Web Socket.
 
-# How to configure
+### How to configure
 
 #### URL config
 - `cd web`
@@ -17,7 +17,7 @@ A one-to-one audio and video calls application built with WebRTC and Web Socket.
 
 Alternatively, you can use any STUN/TURN of your choice.
 
-# Run locally with node js
+### Run locally with node js
 In first terminal:
 ```
 cd web/ws/nodejs/
@@ -31,7 +31,7 @@ php -S 0.0.0.0:8888
 ```
 Then open: localhost:8888
 
-# Usefull commands to run on remote server
+### Usefull commands to run on remote server
 Run ws server in background
 ```
 nohup node ws_server.js > server.log 2>&1 &
