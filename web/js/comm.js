@@ -1,7 +1,14 @@
 'use strict';
 
 const servers = {
-    iceServers: []
+    iceServers: [
+        // Use google servers by default
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" }
+    ]
 };
 
 let myPC;
@@ -22,13 +29,15 @@ window.addEventListener('load', function(){
 
     startTimer();//shows the time spent in room
 
-    //Get ice servers
+    // Fetch additional ICE servers for fallback and add to default servers
     fetch(`${appRoot}Server.php`)
         .then(response => response.json())
         .then(iceServers => {
-            servers.iceServers = [iceServers];
+            servers.iceServers = servers.iceServers.concat(iceServers);
         })
         .catch(error => console.error("Error fetching ICE servers:", error));
+
+    console.log("servers", servers)
     
     wsChat.onopen = function(){
         //subscribe to room
