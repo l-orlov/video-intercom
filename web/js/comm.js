@@ -37,8 +37,6 @@ window.addEventListener('load', function(){
         })
         .catch(error => console.error("Error fetching ICE servers:", error));
 
-    console.log("servers", servers)
-    
     wsChat.onopen = function(){
         //subscribe to room
         wsChat.send(JSON.stringify({

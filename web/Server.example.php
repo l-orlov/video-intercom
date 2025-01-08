@@ -2,7 +2,7 @@
 
 class Server
 {
-    private $cacheFile = __DIR__ . '/cached_ice_servers.json'; // Path to cache file
+    private $cacheFile = __DIR__ . './cached_ice_servers.json'; // Path to cache file
     private $cacheDuration = 86400; // 24 hours in seconds
 
     public function index()
