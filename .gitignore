@@ -2,3 +2,4 @@ Server.php
 config.js
 /vendor/
 *node_modules*
+cached_ice_servers.json
