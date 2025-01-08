@@ -12,12 +12,19 @@ let wsChat;
 var recordedChunks = [];
 var mediaRecorder = null;
 
+let callMutex = {
+    isLocked: false,  // Indicates if a function is already running
+    queue: [],        // Queue to hold pending actions
+};
+let isUnsubscribed = false; // If true can not start call
+let timerInterval = null; // Global variable to store timer ID
+
 const { room, type } = getRoomAndType();
 
 window.addEventListener('load', function(){
     wsChat = new WebSocket(`${wsUrl}/`);
 
-    startCounter();//shows the time spent in room
+    startTimer();//shows the time spent in room
 
     //Get ice servers
     let xhr = new XMLHttpRequest();
@@ -54,6 +61,8 @@ window.addEventListener('load', function(){
     wsChat.onmessage = function(e){
         var data = JSON.parse(e.data);
 
+        console.log('get message from remote', data)
+
         if(data.room === room){
             //above check is not necessary since all messages coming to this user are for the user's current room
             //but just to be on the safe side
@@ -61,7 +70,7 @@ window.addEventListener('load', function(){
                 case 'startCall':
                     // start call by message from server
                     const { isCaller } = data;
-                    startCall(isCaller);
+                    queueStartCall(isCaller);
                     break;
 
                 case 'candidate':
@@ -99,7 +108,7 @@ window.addEventListener('load', function(){
                     // Show message
                     showSnackBar("Remote left room", 10000);
                     // End call by remote
-                    handleEndCallByRemote();
+                    endCallByRemote();
                     break;
             }  
         }
@@ -113,23 +122,12 @@ window.addEventListener('load', function(){
     // On click end call
     document.getElementById("endCall").addEventListener('click', function(e){
         e.preventDefault();
-        
-        myPC ? myPC.close() : "";//close connection as well
-                    
-        // Tell user that call ended
-        showSnackBar("Call ended", 10000);
 
-        // Remove streams and free media devices
-        stopMediaStream();
-        
-        // Remove video playback src
-        $('video').attr('src', appRoot+'img/vidbg.png');
+        // Disable the button
+        const endCallButton = document.getElementById("endCall");
+        endCallButton.disabled = true;
 
-        // Unsubscribe from room
-        wsChat.send(JSON.stringify({
-            action: 'unsubscribe',
-            room: room
-        }));
+        queueEndCall();
     });
 });
 
@@ -142,6 +140,13 @@ function getRoomAndType() {
 }
 
 function startCall(isCaller){
+    console.log("startCall", isCaller);
+
+    if (isUnsubscribed) {
+        // Can not start call
+        return
+    }
+
     if(checkUserMediaSupport){
         myPC = new RTCPeerConnection(servers);//RTCPeerconnection obj
         
@@ -208,9 +213,14 @@ function setLocalMedia(streamConstraints, isCaller){
     navigator.mediaDevices.getUserMedia(
         streamConstraints
     ).then(function(myStream){
+        if (isUnsubscribed) {
+            // Need to stop my stream
+            myStream.getTracks().forEach((track) => track.stop());
+            return;
+        }
+        
         document.getElementById("myVid").srcObject = myStream;
         
-        // myPC.addStream(myStream);//add my stream to RTCPeerConnection
         //add my stream to RTCPeerConnection
         myStream.getTracks().forEach((track)=>{
             myPC.addTrack(track, myStream);
@@ -309,42 +319,48 @@ function setRemoteStatus(status){
     }
 }
 
-function startCounter(){
-    var sec = "00";
-    var min = "00";
-    var hr = "00";
-    
-    var hrElem = document.querySelector("#countHr");
-    var minElem = document.querySelector("#countMin");
-    var secElem = document.querySelector("#countSec");
-    
-    hrElem.innerHTML = hr;
-    minElem.innerHTML = min;
-    secElem.innerHTML = sec;
-        
-    setInterval(function(){
-        //display seconds and increment it by a sec
-        ++sec;
-        
-        secElem.innerHTML = sec >= 60 ? "00" : (sec < 10 ? "0"+sec : sec);
-        
-        if(sec >= 60){
-            //increase minute and reset secs to 00
-            ++min;
-            minElem.innerHTML = min < 10 ? "0"+min : min;
-            
+function startTimer() {
+    let sec = 0; // Time in seconds
+    let min = 0;
+    let hr = 0;
+
+    const hrElem = document.querySelector("#countHr");
+    const minElem = document.querySelector("#countMin");
+    const secElem = document.querySelector("#countSec");
+
+    // Initialize timer
+    hrElem.innerHTML = "00";
+    minElem.innerHTML = "00";
+    secElem.innerHTML = "00";
+
+    // Start the interval
+    timerInterval = setInterval(() => {
+        sec++;
+
+        // Update seconds
+        if (sec === 60) {
             sec = 0;
-            
-            if(min >= 60){
-                //increase hr by one and reset min to 00
-                ++hr;
-                hrElem.innerHTML = hr < 10 ? "0"+hr : hr;
-                
-                min = 0;
-            }
+            min++;
         }
-        
+
+        // Update minutes
+        if (min === 60) {
+            min = 0;
+            hr++;
+        }
+
+        // Display updated time
+        hrElem.innerHTML = hr < 10 ? `0${hr}` : hr;
+        minElem.innerHTML = min < 10 ? `0${min}` : min;
+        secElem.innerHTML = sec < 10 ? `0${sec}` : sec;
     }, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval); // Stop the interval
+        timerInterval = null; // Reset the interval ID
+    }
 }
 
 function showSnackBar(msg, displayTime){
@@ -356,21 +372,99 @@ function showSnackBar(msg, displayTime){
     }, displayTime);
 }
 
-function handleEndCallByRemote(){
-    myPC ? myPC.close() : "";//close connection as well
-                    
-    //tell user that remote ended call
-    showSnackBar("Call ended by remote", 10000);
+function endCall(){
+    console.log("endCall");
 
-    //remove streams and free media devices
+    // Close the peer connection
+    if (myPC) {
+        myPC.close();
+        myPC = null; // Reset the RTCPeerConnection object
+    }
+
+    // Stop the timer
+    stopTimer();
+
+    // Stop the local media stream
     stopMediaStream();
-    
-    //remove video playback src
-    $('video').attr('src', appRoot+'img/vidbg.png');
+
+    // Clear video elements
+    document.getElementById("myVid").srcObject = null; // Clear local video
+    document.getElementById("peerVid").srcObject = null; // Clear remote video
+
+    // Unsubscribe from room
+    wsChat.send(JSON.stringify({
+        action: 'unsubscribe',
+        room: room
+    }));
+    isUnsubscribed = true
+
+    // Tell user that call ended
+    showSnackBar("Call ended", 10000);
+}
+
+function endCallByRemote(){
+    // Close the peer connection
+    if (myPC) {
+        myPC.close();
+        myPC = null; // Reset the RTCPeerConnection object
+    }
+
+    // Stop the local media stream
+    stopMediaStream();
+
+    // Clear video elements
+    document.getElementById("myVid").srcObject = null; // Clear local video
+    document.getElementById("peerVid").srcObject = null; // Clear remote video
+
+    // Notify that call ended by remote
+    showSnackBar("Call ended by remote", 10000);
 }
 
 function stopMediaStream(){    
-    if(myMediaStream && myMediaStream.getTracks().length){
-        myMediaStream.getTracks().forEach(track => track.stop())
+    if (myMediaStream && myMediaStream.getTracks().length) {
+        // Stop all tracks in the media stream
+        myMediaStream.getTracks().forEach((track) => track.stop());
     }
+    myMediaStream = null; // Reset the media stream variable
 }
+
+// Call Actions Queue With Mutex
+function processCallQueue() {
+    if (callMutex.isLocked || callMutex.queue.length === 0) return;
+
+    callMutex.isLocked = true;
+    const action = callMutex.queue.shift(); // Get next function from queue
+
+    action().finally(() => {
+        callMutex.isLocked = false;
+        processCallQueue(); // Process next function in queue
+    });
+}
+
+function queueStartCall(isCaller) {
+    if (isUnsubscribed) {
+        // Cannot start call
+        return;
+    }
+
+    // Push function into queue
+    callMutex.queue.push(() => {
+        return new Promise((resolve) => {
+            startCall(isCaller);
+            resolve(); // Resolve when startCall is completed
+        });
+    });
+    processCallQueue();
+}
+
+function queueEndCall() {
+    // Push function into queue
+    callMutex.queue.push(() => {
+        return new Promise((resolve) => {
+            endCall();
+            resolve(); // Resolve when endCall is completed
+        });
+    });
+    processCallQueue();
+}
+// _Call Actions Queue With Mutex

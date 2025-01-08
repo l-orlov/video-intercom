@@ -102,4 +102,10 @@
 #endCall:hover {
     background-color: darkred; /* Darker red when hovered */
 }
+
+#endCall:disabled {
+    background-color: grey; /* Sets the background color for the disabled button */
+    cursor: not-allowed;    /* Changes the cursor to indicate the button is not clickable */
+    opacity: 0.5;           /* Reduces the opacity to visually indicate a disabled state */
+}
 /* _END CALL */
