@@ -1,21 +1,17 @@
 'use strict';
 
-var servers = {
+const servers = {
     iceServers: []
 };
 
-var myPC;
-var awaitingResponse;
-var streamConstraints;
-var myMediaStream;
+let myPC;
+let awaitingResponse;
+let streamConstraints;
+let myMediaStream;
 let wsChat;
-var recordedChunks = [];
-var mediaRecorder = null;
+let recordedChunks = [];
+let mediaRecorder = null;
 
-let callMutex = {
-    isLocked: false,  // Indicates if a function is already running
-    queue: [],        // Queue to hold pending actions
-};
 let isUnsubscribed = false; // If true can not start call
 let timerInterval = null; // Global variable to store timer ID
 
@@ -27,18 +23,12 @@ window.addEventListener('load', function(){
     startTimer();//shows the time spent in room
 
     //Get ice servers
-    let xhr = new XMLHttpRequest();
-
-    xhr.onreadystatechange = function(e){
-        if(xhr.readyState == 4 && xhr.status == 200){
-            let iceServers = JSON.parse(xhr.responseText);
-
+    fetch(`${appRoot}Server.php`)
+        .then(response => response.json())
+        .then(iceServers => {
             servers.iceServers = [iceServers];
-        }
-    }
-
-    xhr.open("GET", appRoot+"Server.php", true);
-    xhr.send();
+        })
+        .catch(error => console.error("Error fetching ICE servers:", error));
     
     wsChat.onopen = function(){
         //subscribe to room
@@ -61,8 +51,6 @@ window.addEventListener('load', function(){
     wsChat.onmessage = function(e){
         var data = JSON.parse(e.data);
 
-        console.log('get message from remote', data)
-
         if(data.room === room){
             //above check is not necessary since all messages coming to this user are for the user's current room
             //but just to be on the safe side
@@ -70,7 +58,7 @@ window.addEventListener('load', function(){
                 case 'startCall':
                     // start call by message from server
                     const { isCaller } = data;
-                    queueStartCall(isCaller);
+                    startCall(isCaller);
                     break;
 
                 case 'candidate':
@@ -127,7 +115,7 @@ window.addEventListener('load', function(){
         const endCallButton = document.getElementById("endCall");
         endCallButton.disabled = true;
 
-        queueEndCall();
+        endCall();
     });
 });
 
@@ -140,8 +128,6 @@ function getRoomAndType() {
 }
 
 function startCall(isCaller){
-    console.log("startCall", isCaller);
-
     if (isUnsubscribed) {
         // Can not start call
         return
@@ -373,8 +359,6 @@ function showSnackBar(msg, displayTime){
 }
 
 function endCall(){
-    console.log("endCall");
-
     // Close the peer connection
     if (myPC) {
         myPC.close();
@@ -427,44 +411,3 @@ function stopMediaStream(){
     }
     myMediaStream = null; // Reset the media stream variable
 }
-
-// Call Actions Queue With Mutex
-function processCallQueue() {
-    if (callMutex.isLocked || callMutex.queue.length === 0) return;
-
-    callMutex.isLocked = true;
-    const action = callMutex.queue.shift(); // Get next function from queue
-
-    action().finally(() => {
-        callMutex.isLocked = false;
-        processCallQueue(); // Process next function in queue
-    });
-}
-
-function queueStartCall(isCaller) {
-    if (isUnsubscribed) {
-        // Cannot start call
-        return;
-    }
-
-    // Push function into queue
-    callMutex.queue.push(() => {
-        return new Promise((resolve) => {
-            startCall(isCaller);
-            resolve(); // Resolve when startCall is completed
-        });
-    });
-    processCallQueue();
-}
-
-function queueEndCall() {
-    // Push function into queue
-    callMutex.queue.push(() => {
-        return new Promise((resolve) => {
-            endCall();
-            resolve(); // Resolve when endCall is completed
-        });
-    });
-    processCallQueue();
-}
-// _Call Actions Queue With Mutex
