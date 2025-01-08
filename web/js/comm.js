@@ -98,8 +98,8 @@ window.addEventListener('load', function(){
                     setRemoteStatus('offline');
                     // Show message
                     showSnackBar("Remote left room", 10000);
-                    // Terminate call
-                    handleCallTermination();
+                    // End call by remote
+                    handleEndCallByRemote();
                     break;
             }  
         }
@@ -109,6 +109,28 @@ window.addEventListener('load', function(){
             showSnackBar("Maximum of two users allowed in room. Communication disallowed", 5000);
         }
     };
+
+    // On click end call
+    document.getElementById("endCall").addEventListener('click', function(e){
+        e.preventDefault();
+        
+        myPC ? myPC.close() : "";//close connection as well
+                    
+        // Tell user that call ended
+        showSnackBar("Call ended", 10000);
+
+        // Remove streams and free media devices
+        stopMediaStream();
+        
+        // Remove video playback src
+        $('video').attr('src', appRoot+'img/vidbg.png');
+
+        // Unsubscribe from room
+        wsChat.send(JSON.stringify({
+            action: 'unsubscribe',
+            room: room
+        }));
+    });
 });
 
 
@@ -334,11 +356,11 @@ function showSnackBar(msg, displayTime){
     }, displayTime);
 }
 
-function handleCallTermination(){
+function handleEndCallByRemote(){
     myPC ? myPC.close() : "";//close connection as well
                     
-    //tell user that remote terminated call
-    showSnackBar("Call terminated by remote", 10000);
+    //tell user that remote ended call
+    showSnackBar("Call ended by remote", 10000);
 
     //remove streams and free media devices
     stopMediaStream();

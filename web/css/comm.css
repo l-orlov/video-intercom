@@ -78,3 +78,28 @@
     to {right: 0; opacity: 0;}
 }
 /* _SNACKBAR */
+
+/* END CALL */
+#endCallContainer {
+    position: fixed;
+    bottom: 20px; /* Position the button 20px above the bottom */
+    width: 100%;  /* Center the button horizontally */
+    z-index: 1100; /* Ensure it appears above other elements */
+}
+
+#endCall {
+    display: inline-block;
+    background-color: red;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#endCall:hover {
+    background-color: darkred; /* Darker red when hovered */
+}
+/* _END CALL */

@@ -109,6 +109,9 @@ wss.on('connection', (ws) => {
                 case 'subscribe':
                     hub.subscribe(client, room);
                     break;
+                case 'unsubscribe':
+                    hub.unsubscribe(client);
+                    break;
                 default:
                     hub.broadcast(client.room, message, client);
                     break;
