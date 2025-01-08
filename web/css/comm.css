@@ -3,46 +3,37 @@
 }
 
 /* VIDEO */
-#peerVid{
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    min-width: 100%;
-    min-height: 100%;
-    width: auto;
-    height: auto;
-    z-index: -100;
-    -ms-transform: translateX(-50%) translateY(-50%);
-    -moz-transform: translateX(-50%) translateY(-50%);
-    -webkit-transform: translateX(-50%) translateY(-50%);
-    transform: translateX(-50%) translateY(-50%);
-    background: url(../img/vidbg.png) no-repeat;
-    background-size: cover;
+#peerVid {
+    position: fixed; /* Fixes the video relative to the viewport */
+    top: 50%; /* Positions the video in the vertical center */
+    left: 50%; /* Positions the video in the horizontal center */
+    width: 100%; /* Sets the width to 100% of the viewport */
+    height: 100%; /* Sets the height to 100% of the viewport */
+    object-fit: contain; /* Ensures the entire video fits within the container */
+    transform: translate(-50%, -50%); /* Centers the video */
+    z-index: -100; /* Places the video behind other elements */
+    background: black; /* Adds a black background for any empty areas */
 }
 
-#myVid{
-    width: 300px;
-    height: 200px;
-    bottom: 0;
-    position: fixed;
-    right: 0;
+#myVid {
+    position: fixed; /* Fixes the video relative to the screen */
+    bottom: 0;       /* Aligns the video to the bottom edge */
+    right: 0;        /* Aligns the video to the right edge */
+    width: 30%;      /* Sets the width to 30% of the screen width */
+    height: auto;    /* Maintains aspect ratio by auto-calculating height */
+    max-height: 30%; /* Restricts the maximum height to 30% of the screen height */
+    z-index: 1000;   /* Ensures the video stays above other elements */
 }
 
-
-/* Small screens */
-@media(max-width:768px){
-    #myVid{
-        width: 200px;
-        height: 100px;
-        bottom: 100px;
-        position: fixed;
-        left: 0;
+/* Adaptation for smaller screens */
+@media (max-width: 768px) {
+    #myVid {
+        width: 50%; /* Increases width to 50% on smaller screens */
+        max-height: 40%; /* Increases maximum height to 40% for better visibility */
     }
 }
 
 /* _VIDEO */
-
-
 
 /* SNACKBAR */
 /* The snackbar - position it at the bottom and in the middle of the screen */
