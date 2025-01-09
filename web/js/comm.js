@@ -22,9 +22,24 @@ let mediaRecorder = null;
 let isUnsubscribed = false; // If true can not start call
 let timerInterval = null; // Global variable to store timer ID
 
-const { room, type } = getRoomAndType();
+const { room, role } = getRoomAndRole();
 
 window.addEventListener('load', function(){
+    // Button selectors
+    const toggleVideoButton = document.getElementById("toggleVideo");
+    const endCallButton = document.getElementById("endCall");
+
+    // Check the role
+    if (role === "callee") {
+        // Callee: Show both buttons
+        toggleVideoButton.style.display = "inline-block"; // Display the "Toggle Video" button
+        endCallButton.style.margin = ""; // Reset margin for proper alignment of both buttons
+    } else {
+        // Caller: Show only the "End Call" button
+        toggleVideoButton.style.display = "none";
+        endCallButton.style.margin = "auto"; // Center the "End Call" button
+    }
+    
     wsChat = new WebSocket(`${wsUrl}/`);
 
     startTimer();//shows the time spent in room
@@ -46,9 +61,7 @@ window.addEventListener('load', function(){
         
         showSnackBar("Connected to the ws server!", 5000);
 
-        if (type) {
-            streamConstraints = type === "video" ? { video: { facingMode: 'user' }, audio: true } : { audio: true };
-        }
+        streamConstraints = { video: { facingMode: 'user' }, audio: true };
     };
     
     wsChat.onerror = function(){
@@ -124,14 +137,21 @@ window.addEventListener('load', function(){
 
         endCall();
     });
+
+    // On click toggle video
+    if (role === "callee") {
+        document.getElementById("toggleVideo").addEventListener("click", function () {
+            toggleVideoStream();
+        });
+    }
 });
 
 
-function getRoomAndType() {
+function getRoomAndRole() {
     const params = new URLSearchParams(window.location.search);
     const room = params.get("room") || "";
-    const type = params.get("type") || "";
-    return { room, type };
+    const role = params.get("role") || "caller"; // Default to caller
+    return { room, role };
 }
 
 function startCall(isCaller){
@@ -221,6 +241,14 @@ function setLocalMedia(streamConstraints, isCaller){
         
         //set var myMediaStream as the stream gotten. Will be used to remove stream later on
         myMediaStream = myStream;
+
+        // Disable video track initially for callee
+        if (role === "callee") {
+            const videoTrack = myMediaStream.getVideoTracks()[0];
+            if (videoTrack) {
+                videoTrack.enabled = false;
+            }
+        }
         
         if(isCaller){
             myPC.createOffer({
@@ -417,4 +445,57 @@ function stopMediaStream(){
         myMediaStream.getTracks().forEach((track) => track.stop());
     }
     myMediaStream = null; // Reset the media stream variable
+}
+
+function toggleVideoStream() {
+    if (!myMediaStream) {
+        showSnackBar("Media stream not initialized", 5000);
+        return;
+    }
+
+    const videoTrack = myMediaStream.getVideoTracks()[0];
+
+    if (videoTrack) {
+        // Turn off video by disabling the track
+        videoTrack.enabled = !videoTrack.enabled;
+
+        // Update button UI based on the track's state
+        if (videoTrack.enabled) {
+            document.getElementById("toggleVideo").classList.remove("btn-secondary");
+            document.getElementById("toggleVideo").classList.add("btn-primary");
+            showSnackBar("Video enabled", 3000);
+        } else {
+            document.getElementById("toggleVideo").classList.remove("btn-primary");
+            document.getElementById("toggleVideo").classList.add("btn-secondary");
+            showSnackBar("Video disabled", 3000);
+        }
+    } else {
+        // No video track exists; try to add one
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                const newVideoTrack = stream.getVideoTracks()[0];
+
+                if (newVideoTrack) {
+                    // Add the new video track to myMediaStream
+                    myMediaStream.addTrack(newVideoTrack);
+
+                    // Replace the video track in the PeerConnection
+                    const sender = myPC.getSenders().find(s => s.track && s.track.kind === "video");
+                    if (sender) {
+                        sender.replaceTrack(newVideoTrack);
+                    } else {
+                        myPC.addTrack(newVideoTrack, myMediaStream);
+                    }
+
+                    // Update the button UI
+                    document.getElementById("toggleVideo").classList.remove("btn-secondary");
+                    document.getElementById("toggleVideo").classList.add("btn-primary");
+                    showSnackBar("Video enabled", 3000);
+                }
+            })
+            .catch((err) => {
+                console.error("Error accessing video: ", err);
+                showSnackBar("Unable to access video", 5000);
+            });
+    }
 }

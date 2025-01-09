@@ -79,33 +79,58 @@
 }
 /* _SNACKBAR */
 
-/* END CALL */
-#endCallContainer {
+/* CONTROL BUTTONS */
+#controlButtonsContainer {
     position: fixed;
-    bottom: 20px; /* Position the button 20px above the bottom */
-    width: 100%;  /* Center the button horizontally */
-    z-index: 1100; /* Ensure it appears above other elements */
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px; /* Space between buttons */
+    z-index: 1100;
 }
 
+/* END CALL BUTTON */
 #endCall {
-    display: inline-block;
     background-color: red;
     color: white;
     border: none;
-    padding: 15px 30px;
-    font-size: 20px;
-    border-radius: 5px;
+    padding: 20px 30px;
+    font-size: 24px;
+    border-radius: 10px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, transform 0.2s;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 #endCall:hover {
-    background-color: darkred; /* Darker red when hovered */
+    background-color: darkred;
+    transform: scale(1.1);
 }
 
 #endCall:disabled {
-    background-color: grey; /* Sets the background color for the disabled button */
-    cursor: not-allowed;    /* Changes the cursor to indicate the button is not clickable */
-    opacity: 0.5;           /* Reduces the opacity to visually indicate a disabled state */
+    background-color: grey;
+    cursor: not-allowed;
+    opacity: 0.5;
 }
-/* _END CALL */
+
+/* TOGGLE VIDEO BUTTON */
+#toggleVideo {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 20px 30px;
+    font-size: 24px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+#toggleVideo:hover {
+    background-color: #0056b3;
+    transform: scale(1.1);
+}
+/* _CONTROL BUTTONS */
