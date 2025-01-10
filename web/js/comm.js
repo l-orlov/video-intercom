@@ -24,113 +24,105 @@ let timerInterval = null; // Tracks call duration
 const toggleVideoButton = document.getElementById("toggleVideo");
 const endCallButton = document.getElementById("endCall");
 
-// Get room and role
+// Get room and role from query parameters
 const { room, role } = getRoomAndRole();
 
-window.addEventListener('load', function(){
-    // Initially show only the "End Call" button
-    toggleVideoButton.style.display = "none";
-    endCallButton.style.margin = "auto"; // Center the "End Call" button
+/* Event Listeners */
+window.addEventListener('load', initializeApplication);
 
-    wsChat = new WebSocket(`${wsUrl}/`);
+function initializeApplication() {
+    setupInitialUI();
+    fetchAdditionalIceServers();
+    initializeWebSocket();
+    setupButtonEventListeners();
+}
 
-    startTimer();//shows the time spent in room
+/* Configures the initial UI */
+function setupInitialUI() {
+    toggleVideoButton.style.display = "none"; // Hide video toggle for caller
+    endCallButton.style.margin = "auto"; // Center the end call button
+}
 
-    // Fetch additional ICE servers for fallback and add to default servers
+/* Fetches additional ICE servers for fallback and adds them to default list */
+function fetchAdditionalIceServers() {
     fetch(`${appRoot}Server.php`)
         .then(response => response.json())
         .then(iceServers => {
             servers.iceServers = servers.iceServers.concat(iceServers);
         })
         .catch(error => console.error("Error fetching ICE servers:", error));
+}
 
-    wsChat.onopen = function(){
-        //subscribe to room
-        wsChat.send(JSON.stringify({
-            action: 'subscribe',
-            room: room
-        }));
-        
-        showSnackBar("Connected to the ws server!", 5000);
+/* Initializes the WebSocket connection and sets up event handlers */
+function initializeWebSocket() {
+    wsChat = new WebSocket(`${wsUrl}/`);
+
+    wsChat.onopen = () => {
+        // Subscribe to room
+        wsChat.send(JSON.stringify({ action: 'subscribe', room }));
+        showSnackBar("Connected to the WebSocket server!", 5000);
     };
-    
-    wsChat.onerror = function(){
-        showSnackBar("Unable to connect to the ws server! Kindly refresh", 20000);
+
+    wsChat.onerror = () => {
+        showSnackBar("Unable to connect to the WebSocket server. Please refresh.", 20000);
     };
-    
-    wsChat.onmessage = function(e){
-        var data = JSON.parse(e.data);
 
-        if(data.room === room){
-            //above check is not necessary since all messages coming to this user are for the user's current room
-            //but just to be on the safe side
-            switch(data.action){
-                case 'startCall':
-                    // start call by message from server
-                    const { isCaller } = data;
-                    startCall(isCaller);
-                    break;
+    wsChat.onmessage = handleWebSocketMessage;
+}
 
-                case 'candidate':
-                    //message is iceCandidate
-                    myPC ? myPC.addIceCandidate(new RTCIceCandidate(data.candidate)) : "";
-                    
-                    break;
+/* Handles incoming WebSocket messages */
+function handleWebSocketMessage(event) {
+    const data = JSON.parse(event.data);
 
-                case 'sdp':
-                    //message is signal description
-                    myPC ? myPC.setRemoteDescription(new RTCSessionDescription(data.sdp)) : "";
-
-                    break;
-                    
-                case 'newSub':
-                    setRemoteStatus('online');
-
-                    //once the other user joined and current user has been notified, current user should also send a signal
-                    //that he is online
-                    wsChat.send(JSON.stringify({
-                        action: 'imOnline',
-                        room: room
-                    }));
-
-                    showSnackBar("Remote entered room", 10000);
-                    
-                    break;
-                    
-                case 'imOnline':
-                    setRemoteStatus('online');
-                    break;
-                    
-                case 'imOffline':
-                    setRemoteStatus('offline');
-                    // Show message
-                    showSnackBar("Remote left room", 10000);
-                    // End call by remote
-                    endCallByRemote();
-                    break;
-            }  
+    if (data.room === room) {
+        switch (data.action) {
+            case 'startCall':
+                // Start call by message from server
+                startCall(data.isCaller);
+                break;
+            case 'candidate':
+                if (myPC) myPC.addIceCandidate(new RTCIceCandidate(data.candidate));
+                break;
+            case 'sdp':
+                if (myPC) myPC.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                break;
+            case 'newSub':
+                handleNewSubscriber();
+                break;
+            case 'imOnline':
+                setRemoteStatus('online');
+                break;
+            case 'imOffline':
+                handleRemoteOffline();
+                break;
         }
-        
-        else if(data.action === "subRejected"){
-            //subscription on this device rejected cos user has subscribed on another device/browser
-            showSnackBar("Maximum of two users allowed in room. Communication disallowed", 5000);
-        }
-    };
+    } else if (data.action === "subRejected") {
+        showSnackBar("Only two users allowed in the room. Communication disallowed.", 5000);
+    }
+}
 
-    // On click end call
-    document.getElementById("endCall").addEventListener('click', function(e){
-        e.preventDefault();
+function handleNewSubscriber() {
+    setRemoteStatus('online');
+    wsChat.send(JSON.stringify({ action: 'imOnline', room }));
+    showSnackBar("Remote joined the room.", 10000);
+}
+
+function handleRemoteOffline() {
+    setRemoteStatus('offline');
+    endCall();
+    showSnackBar("Remote left the room.", 10000);
+}
+
+/* Sets up event listeners for buttons */
+function setupButtonEventListeners() {
+    endCallButton.addEventListener('click', () => {
         endCall();
     });
 
-    // On click toggle video
     if (role === "callee") {
-        document.getElementById("toggleVideo").addEventListener("click", function () {
-            toggleVideoStream();
-        });
+        toggleVideoButton.addEventListener('click', toggleVideoStream);
     }
-});
-
+}
 
 function getRoomAndRole() {
     const params = new URLSearchParams(window.location.search);
@@ -144,6 +136,8 @@ function startCall(isCaller){
         // Can not start call
         return
     }
+
+    startTimer();
 
     if(checkUserMediaSupport){
         myPC = new RTCPeerConnection(servers);//RTCPeerconnection obj
@@ -207,8 +201,9 @@ function startCall(isCaller){
     }
 }
 
-function checkUserMediaSupport(){
-    return !!(navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
+/* Checks browser support for user media */
+function checkUserMediaSupport() {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
 
 //get and set local media
@@ -385,7 +380,6 @@ function endCall(){
         myPC = null; // Reset the RTCPeerConnection object
     }
 
-    // Stop the timer
     stopTimer();
 
     // Stop the local media stream
