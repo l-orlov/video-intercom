@@ -1,5 +1,6 @@
 'use strict';
 
+// Config
 const servers = {
     iceServers: [
         // Use google servers by default
@@ -10,36 +11,27 @@ const servers = {
         { urls: "stun:stun4.l.google.com:19302" }
     ]
 };
+const streamConstraints = { video: { facingMode: 'user' }, audio: true }
 
-let myPC;
-let awaitingResponse;
-let streamConstraints;
-let myMediaStream;
-let wsChat;
-let recordedChunks = [];
-let mediaRecorder = null;
+// Global variables
+let myPC; // PeerConnection
+let myMediaStream; // Media stream object
+let wsChat; // WebSocket connection
+let isUnsubscribed = false; // Tracks subscription status (if true can not start call)
+let timerInterval = null; // Tracks call duration
 
-let isUnsubscribed = false; // If true can not start call
-let timerInterval = null; // Global variable to store timer ID
+// Button selectors
+const toggleVideoButton = document.getElementById("toggleVideo");
+const endCallButton = document.getElementById("endCall");
 
+// Get room and role
 const { room, role } = getRoomAndRole();
 
 window.addEventListener('load', function(){
-    // Button selectors
-    const toggleVideoButton = document.getElementById("toggleVideo");
-    const endCallButton = document.getElementById("endCall");
+    // Initially show only the "End Call" button
+    toggleVideoButton.style.display = "none";
+    endCallButton.style.margin = "auto"; // Center the "End Call" button
 
-    // Check the role
-    if (role === "callee") {
-        // Callee: Show both buttons
-        toggleVideoButton.style.display = "inline-block"; // Display the "Toggle Video" button
-        endCallButton.style.margin = ""; // Reset margin for proper alignment of both buttons
-    } else {
-        // Caller: Show only the "End Call" button
-        toggleVideoButton.style.display = "none";
-        endCallButton.style.margin = "auto"; // Center the "End Call" button
-    }
-    
     wsChat = new WebSocket(`${wsUrl}/`);
 
     startTimer();//shows the time spent in room
@@ -60,8 +52,6 @@ window.addEventListener('load', function(){
         }));
         
         showSnackBar("Connected to the ws server!", 5000);
-
-        streamConstraints = { video: { facingMode: 'user' }, audio: true };
     };
     
     wsChat.onerror = function(){
@@ -130,11 +120,6 @@ window.addEventListener('load', function(){
     // On click end call
     document.getElementById("endCall").addEventListener('click', function(e){
         e.preventDefault();
-
-        // Disable the button
-        const endCallButton = document.getElementById("endCall");
-        endCallButton.disabled = true;
-
         endCall();
     });
 
@@ -210,6 +195,11 @@ function startCall(isCaller){
         
         //set local media
         setLocalMedia(streamConstraints, isCaller);
+
+        // Show video button for callee
+        if (role === "callee") {
+            showVideoButtonForCallee();
+        }
     }
     
     else{
@@ -417,6 +407,9 @@ function endCall(){
     }));
     isUnsubscribed = true
 
+    // Disable buttons
+    disableButtons();
+
     // Tell user that call ended
     showSnackBar("Call ended", 10000);
 }
@@ -461,12 +454,10 @@ function toggleVideoStream() {
 
         // Update button UI based on the track's state
         if (videoTrack.enabled) {
-            document.getElementById("toggleVideo").classList.remove("btn-secondary");
-            document.getElementById("toggleVideo").classList.add("btn-primary");
+            toggleVideoButton.classList.add("btn-enabled");
             showSnackBar("Video enabled", 3000);
         } else {
-            document.getElementById("toggleVideo").classList.remove("btn-primary");
-            document.getElementById("toggleVideo").classList.add("btn-secondary");
+            toggleVideoButton.classList.remove("btn-enabled");
             showSnackBar("Video disabled", 3000);
         }
     } else {
@@ -488,8 +479,7 @@ function toggleVideoStream() {
                     }
 
                     // Update the button UI
-                    document.getElementById("toggleVideo").classList.remove("btn-secondary");
-                    document.getElementById("toggleVideo").classList.add("btn-primary");
+                    toggleVideoButton.classList.add("btn-enabled");
                     showSnackBar("Video enabled", 3000);
                 }
             })
@@ -498,4 +488,17 @@ function toggleVideoStream() {
                 showSnackBar("Unable to access video", 5000);
             });
     }
+}
+
+// Function to show the video button for the callee when the call starts
+function showVideoButtonForCallee() {
+    if (role === "callee") {
+        toggleVideoButton.style.display = "inline-block"; // Show the button
+        endCallButton.style.margin = ""; // Reset margin for proper alignment of both buttons
+    }
+}
+
+function disableButtons() {
+    toggleVideoButton.disabled = true;
+    endCallButton.disabled = true;
 }

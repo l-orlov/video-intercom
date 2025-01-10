@@ -92,6 +92,14 @@
     z-index: 1100;
 }
 
+/* Disable hover effect for disabled buttons */
+#controlButtonsContainer button:disabled:hover {
+    transform: none; /* Prevent size change */
+    background-color: grey; /* Ensure it stays grey */
+    color: white; /* Ensure the text/icon stays white */
+    cursor: not-allowed; /* Keep the not-allowed cursor */
+}
+
 /* END CALL BUTTON */
 #endCall {
     background-color: red;
@@ -112,14 +120,17 @@
 
 #endCall:disabled {
     background-color: grey;
+    color: white;
     cursor: not-allowed;
     opacity: 0.5;
+    transition: none; /* Disable any hover animations */
 }
 
 /* TOGGLE VIDEO BUTTON */
+/* Video off */
 #toggleVideo {
-    background-color: #007bff;
-    color: white;
+    background-color: #ffffff; /* White background */
+    color: #6C6C6C; /* Gray center */
     border: none;
     padding: 20px 30px;
     font-size: 24px;
@@ -129,8 +140,23 @@
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* Video on */
+#toggleVideo.btn-enabled {
+    background-color: #6C6C6C; /* Gray background */
+    color: #ffffff; /* White icon */
+}
+
 #toggleVideo:hover {
-    background-color: #0056b3;
+    background-color: #6C6C6C;
+    color: #ffffff;
     transform: scale(1.1);
+}
+
+#toggleVideo:disabled {
+    background-color: grey;
+    color: white;
+    cursor: not-allowed;
+    opacity: 0.5;
+    transition: none; /* Disable any hover animations */
 }
 /* _CONTROL BUTTONS */
