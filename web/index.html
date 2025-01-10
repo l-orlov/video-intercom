@@ -56,9 +56,9 @@
                     var ownerCallLink = appRoot + "comm.html?room=" + room + "&role=owner";
                     
                     linkInput.innerHTML = `
-                        <a href="${callLink}" target="_blank">Join to call</a>
+                        <a href="${callLink}" target="_blank">Join call</a>
                         <br><br>
-                        <a href="${ownerCallLink}" target="_blank">Join to call as owner</a>
+                        <a href="${ownerCallLink}" target="_blank">Join call as owner</a>
                     `;
                 }).catch(function(err){
                     linkInput.innerHTML = err;
