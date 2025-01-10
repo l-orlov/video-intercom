@@ -301,11 +301,6 @@ function setLocalMedia(streamConstraints, isCaller){
     });
 }
 
-/**
- * 
- * @param {type} desc
- * @returns {undefined}
- */
 function description(desc){
     myPC.setLocalDescription(desc);
 
