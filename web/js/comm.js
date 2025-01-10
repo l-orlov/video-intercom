@@ -103,7 +103,7 @@ function handleNewSubscriber() {
 }
 
 function handleRemoteOffline() {
-    endCall();
+    endCallByRemote();
     showSnackBar("Remote left room.", 10000);
 }
 
