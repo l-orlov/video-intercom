@@ -410,45 +410,59 @@ function toggleVideoStream() {
     const videoTrack = myMediaStream.getVideoTracks()[0];
 
     if (videoTrack) {
-        // Turn off video by disabling track
-        videoTrack.enabled = !videoTrack.enabled;
+        // Toggle video track state
+        const isEnabled = !videoTrack.enabled;
+        videoTrack.enabled = isEnabled;
 
-        // Update button UI based on track's state
-        if (videoTrack.enabled) {
-            toggleVideoButton.classList.add("btn-enabled");
-            showSnackBar("Video enabled", 3000);
-        } else {
-            toggleVideoButton.classList.remove("btn-enabled");
-            showSnackBar("Video disabled", 3000);
-        }
+        // Update UI
+        updateVideoButtonUI(isEnabled);
+        showSnackBar(`Video ${isEnabled ? "enabled" : "disabled"}`, 3000);
+
+        console.log(`Video track ${isEnabled ? "enabled" : "disabled"}`);
     } else {
-        // No video track exists; try to add one
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then((stream) => {
-                const newVideoTrack = stream.getVideoTracks()[0];
-
-                if (newVideoTrack) {
-                    // Add new video track to myMediaStream
-                    myMediaStream.addTrack(newVideoTrack);
-
-                    // Replace video track in PeerConnection
-                    const sender = myPC.getSenders().find(s => s.track && s.track.kind === "video");
-                    if (sender) {
-                        sender.replaceTrack(newVideoTrack);
-                    } else {
-                        myPC.addTrack(newVideoTrack, myMediaStream);
-                    }
-
-                    // Update button UI
-                    toggleVideoButton.classList.add("btn-enabled");
-                    showSnackBar("Video enabled", 3000);
-                }
-            })
-            .catch((err) => {
-                console.error("Error accessing video: ", err);
-                showSnackBar("Unable to access video", 5000);
-            });
+        // Add video track if none exists
+        addVideoTrackToStream();
     }
+}
+
+/** Updates the toggle video button UI based on video state */
+function updateVideoButtonUI(isEnabled) {
+    if (isEnabled) {
+        toggleVideoButton.classList.add("btn-enabled");
+        toggleVideoButton.classList.remove("btn-disabled");
+    } else {
+        toggleVideoButton.classList.remove("btn-enabled");
+        toggleVideoButton.classList.add("btn-disabled");
+    }
+}
+
+/** Adds a video track to the media stream */
+function addVideoTrackToStream() {
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+            const newVideoTrack = stream.getVideoTracks()[0];
+
+            if (newVideoTrack) {
+                myMediaStream.addTrack(newVideoTrack);
+
+                const sender = myPC.getSenders().find(s => s.track && s.track.kind === "video");
+                if (sender) {
+                    sender.replaceTrack(newVideoTrack);
+                } else {
+                    myPC.addTrack(newVideoTrack, myMediaStream);
+                }
+
+                // Update UI
+                updateVideoButtonUI(true);
+                showSnackBar("Video enabled", 3000);
+
+                console.log("New video track added and enabled.");
+            }
+        })
+        .catch((err) => {
+            console.error("Error accessing video: ", err);
+            showSnackBar("Unable to access video", 5000);
+        });
 }
 
 // Function to show video button for owner when call starts
