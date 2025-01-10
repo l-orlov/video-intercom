@@ -24,8 +24,8 @@ let timerInterval = null; // Tracks call duration
 const toggleVideoButton = document.getElementById("toggleVideo");
 const endCallButton = document.getElementById("endCall");
 
-// Get room and role from query parameters
-const { room, role } = getRoomAndRole();
+// Get room and ownership from query parameters
+const { room, isOwner } = getRoomAndOwnership();
 
 /* Event Listeners */
 window.addEventListener('load', initializeApplication);
@@ -37,10 +37,10 @@ function initializeApplication() {
     setupButtonEventListeners();
 }
 
-/* Configures the initial UI */
+/* Configures initial UI */
 function setupInitialUI() {
     toggleVideoButton.style.display = "none"; // Hide video toggle for caller
-    endCallButton.style.margin = "auto"; // Center the end call button
+    endCallButton.style.margin = "auto"; // Center end call button
 }
 
 /* Fetches additional ICE servers for fallback and adds them to default list */
@@ -53,18 +53,18 @@ function fetchAdditionalIceServers() {
         .catch(error => console.error("Error fetching ICE servers:", error));
 }
 
-/* Initializes the WebSocket connection and sets up event handlers */
+/* Initializes WebSocket connection and sets up event handlers */
 function initializeWebSocket() {
     wsChat = new WebSocket(`${wsUrl}/`);
 
     wsChat.onopen = () => {
         // Subscribe to room
         wsChat.send(JSON.stringify({ action: 'subscribe', room }));
-        showSnackBar("Connected to the WebSocket server!", 5000);
+        showSnackBar("Connected to WebSocket server!", 5000);
     };
 
     wsChat.onerror = () => {
-        showSnackBar("Unable to connect to the WebSocket server. Please refresh.", 20000);
+        showSnackBar("Unable to connect to WebSocket server. Please refresh.", 20000);
     };
 
     wsChat.onmessage = handleWebSocketMessage;
@@ -97,20 +97,20 @@ function handleWebSocketMessage(event) {
                 break;
         }
     } else if (data.action === "subRejected") {
-        showSnackBar("Only two users allowed in the room. Communication disallowed.", 5000);
+        showSnackBar("Only two users allowed in room. Communication disallowed.", 5000);
     }
 }
 
 function handleNewSubscriber() {
     setRemoteStatus('online');
     wsChat.send(JSON.stringify({ action: 'imOnline', room }));
-    showSnackBar("Remote joined the room.", 10000);
+    showSnackBar("Remote joined room.", 10000);
 }
 
 function handleRemoteOffline() {
     setRemoteStatus('offline');
     endCall();
-    showSnackBar("Remote left the room.", 10000);
+    showSnackBar("Remote left room.", 10000);
 }
 
 /* Sets up event listeners for buttons */
@@ -119,85 +119,91 @@ function setupButtonEventListeners() {
         endCall();
     });
 
-    if (role === "callee") {
+    if (isOwner) {
         toggleVideoButton.addEventListener('click', toggleVideoStream);
     }
 }
 
-function getRoomAndRole() {
+/* Extracts room and role from URL parameters and determines ownership */
+function getRoomAndOwnership() {
     const params = new URLSearchParams(window.location.search);
     const room = params.get("room") || "";
-    const role = params.get("role") || "caller"; // Default to caller
-    return { room, role };
+    const isOwner = params.get("role") === "owner"; // Determine ownership
+    return { room, isOwner };
 }
 
-function startCall(isCaller){
+/* Starts call */
+function startCall(isCaller) {
     if (isUnsubscribed) {
-        // Can not start call
-        return
+        console.warn("Cannot start call: User is unsubscribed.");
+        return;
     }
 
     startTimer();
 
-    if(checkUserMediaSupport){
-        myPC = new RTCPeerConnection(servers);//RTCPeerconnection obj
-        
-        //When my ice candidates become available
-        myPC.onicecandidate = function(e){
-            if(e.candidate){
-                //send my candidate to peer
-                wsChat.send(JSON.stringify({
-                    action: 'candidate',
-                    candidate: e.candidate,
-                    room: room
-                }));
-            }
-        };
-    
-        //When remote stream becomes available
-        myPC.ontrack = function(e){
-            const stream = e.streams[0];
-            document.getElementById("peerVid").srcObject = stream;
-        };
-        
-        //when remote connection state and ice agent is closed
-        myPC.oniceconnectionstatechange = function(){
-            switch(myPC.iceConnectionState){
-                case 'disconnected':
-                case 'failed':
-                    console.log("Ice connection state is failed/disconnected");
-                    showSnackBar("Call connection problem", 15000);
-                    break;
-                    
-                case 'closed':
-                    console.log("Ice connection state is 'closed'");
-                    showSnackBar("Call connection closed", 15000);
-                    break;
-            }
-        };
-        
-        
-        //WHEN REMOTE CLOSES CONNECTION
-        myPC.onsignalingstatechange = function(){
-            switch(myPC.signalingState){
-                case 'closed':
-                    console.log("Signalling state is 'closed'");
-                    showSnackBar("Signal lost", 15000);
-                    break;
-            }
-        };
-        
-        //set local media
-        setLocalMedia(streamConstraints, isCaller);
-
-        // Show video button for callee
-        if (role === "callee") {
-            showVideoButtonForCallee();
-        }
+    if (!checkUserMediaSupport()) {
+        showSnackBar("Your browser does not support video calls.", 30000);
+        return;
     }
-    
-    else{
-        showSnackBar("Your browser does not support video call", 30000);
+
+    initializePeerConnection();
+
+    // Set up local media
+    setLocalMedia(streamConstraints, isCaller);
+
+    // Show video toggle button for owner
+    if (isOwner) {
+        showVideoButtonForOwner();
+    }
+}
+
+/* Initializes RTCPeerConnection and sets up event handlers */
+function initializePeerConnection() {
+    myPC = new RTCPeerConnection(servers);
+
+    myPC.onicecandidate = handleIceCandidate;
+    myPC.ontrack = handleRemoteStream;
+    myPC.oniceconnectionstatechange = handleIceConnectionStateChange;
+    myPC.onsignalingstatechange = handleSignalingStateChange;
+}
+
+/* Handles ICE candidate events */
+function handleIceCandidate(event) {
+    if (event.candidate) {
+        wsChat.send(JSON.stringify({
+            action: 'candidate',
+            candidate: event.candidate,
+            room: room
+        }));
+    }
+}
+
+/* Handles addition of a remote stream */
+function handleRemoteStream(event) {
+    const remoteStream = event.streams[0];
+    document.getElementById("peerVid").srcObject = remoteStream;
+}
+
+/* Handles changes in ICE connection state */
+function handleIceConnectionStateChange() {
+    switch (myPC.iceConnectionState) {
+        case 'disconnected':
+        case 'failed':
+            console.warn("ICE connection state failed or disconnected.");
+            showSnackBar("Call connection problem", 15000);
+            break;
+        case 'closed':
+            console.log("ICE connection state closed.");
+            showSnackBar("Call connection closed", 15000);
+            break;
+    }
+}
+
+/* Handles changes in signaling state */
+function handleSignalingStateChange() {
+    if (myPC.signalingState === 'closed') {
+        console.warn("Signaling state is 'closed'.");
+        showSnackBar("Signal lost", 15000);
     }
 }
 
@@ -224,11 +230,11 @@ function setLocalMedia(streamConstraints, isCaller){
             myPC.addTrack(track, myStream);
         });
         
-        //set var myMediaStream as the stream gotten. Will be used to remove stream later on
+        //set var myMediaStream as stream gotten. Will be used to remove stream later on
         myMediaStream = myStream;
 
-        // Disable video track initially for callee
-        if (role === "callee") {
+        // Disable video track initially for owner
+        if (isOwner) {
             const videoTrack = myMediaStream.getVideoTracks()[0];
             if (videoTrack) {
                 videoTrack.enabled = false;
@@ -307,7 +313,7 @@ function description(desc){
     }));
 }
 
-//set the status of remote (online or offline)
+//set status of remote (online or offline)
 function setRemoteStatus(status){
     if(status === 'online'){
         $("#remoteStatus").css('color', 'green');
@@ -334,7 +340,7 @@ function startTimer() {
     minElem.innerHTML = "00";
     secElem.innerHTML = "00";
 
-    // Start the interval
+    // Start interval
     timerInterval = setInterval(() => {
         sec++;
 
@@ -359,8 +365,8 @@ function startTimer() {
 
 function stopTimer() {
     if (timerInterval) {
-        clearInterval(timerInterval); // Stop the interval
-        timerInterval = null; // Reset the interval ID
+        clearInterval(timerInterval); // Stop interval
+        timerInterval = null; // Reset interval ID
     }
 }
 
@@ -374,15 +380,15 @@ function showSnackBar(msg, displayTime){
 }
 
 function endCall(){
-    // Close the peer connection
+    // Close peer connection
     if (myPC) {
         myPC.close();
-        myPC = null; // Reset the RTCPeerConnection object
+        myPC = null; // Reset RTCPeerConnection object
     }
 
     stopTimer();
 
-    // Stop the local media stream
+    // Stop local media stream
     stopMediaStream();
 
     // Clear video elements
@@ -404,13 +410,13 @@ function endCall(){
 }
 
 function endCallByRemote(){
-    // Close the peer connection
+    // Close peer connection
     if (myPC) {
         myPC.close();
-        myPC = null; // Reset the RTCPeerConnection object
+        myPC = null; // Reset RTCPeerConnection object
     }
 
-    // Stop the local media stream
+    // Stop local media stream
     stopMediaStream();
 
     // Clear video elements
@@ -423,10 +429,10 @@ function endCallByRemote(){
 
 function stopMediaStream(){    
     if (myMediaStream && myMediaStream.getTracks().length) {
-        // Stop all tracks in the media stream
+        // Stop all tracks in media stream
         myMediaStream.getTracks().forEach((track) => track.stop());
     }
-    myMediaStream = null; // Reset the media stream variable
+    myMediaStream = null; // Reset media stream variable
 }
 
 function toggleVideoStream() {
@@ -438,10 +444,10 @@ function toggleVideoStream() {
     const videoTrack = myMediaStream.getVideoTracks()[0];
 
     if (videoTrack) {
-        // Turn off video by disabling the track
+        // Turn off video by disabling track
         videoTrack.enabled = !videoTrack.enabled;
 
-        // Update button UI based on the track's state
+        // Update button UI based on track's state
         if (videoTrack.enabled) {
             toggleVideoButton.classList.add("btn-enabled");
             showSnackBar("Video enabled", 3000);
@@ -456,10 +462,10 @@ function toggleVideoStream() {
                 const newVideoTrack = stream.getVideoTracks()[0];
 
                 if (newVideoTrack) {
-                    // Add the new video track to myMediaStream
+                    // Add new video track to myMediaStream
                     myMediaStream.addTrack(newVideoTrack);
 
-                    // Replace the video track in the PeerConnection
+                    // Replace video track in PeerConnection
                     const sender = myPC.getSenders().find(s => s.track && s.track.kind === "video");
                     if (sender) {
                         sender.replaceTrack(newVideoTrack);
@@ -467,7 +473,7 @@ function toggleVideoStream() {
                         myPC.addTrack(newVideoTrack, myMediaStream);
                     }
 
-                    // Update the button UI
+                    // Update button UI
                     toggleVideoButton.classList.add("btn-enabled");
                     showSnackBar("Video enabled", 3000);
                 }
@@ -479,10 +485,10 @@ function toggleVideoStream() {
     }
 }
 
-// Function to show the video button for the callee when the call starts
-function showVideoButtonForCallee() {
-    if (role === "callee") {
-        toggleVideoButton.style.display = "inline-block"; // Show the button
+// Function to show video button for owner when call starts
+function showVideoButtonForOwner() {
+    if (isOwner) {
+        toggleVideoButton.style.display = "inline-block"; // Show button
         endCallButton.style.margin = ""; // Reset margin for proper alignment of both buttons
     }
 }
