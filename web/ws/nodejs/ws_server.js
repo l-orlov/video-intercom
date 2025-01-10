@@ -6,6 +6,7 @@ class Client {
     constructor(ws) {
         this.ws = ws;
         this.room = '';
+        this.isOwner = false;
     }
 }
 
@@ -29,17 +30,32 @@ class Hub {
         this.rooms = new Map();
     }
 
-    subscribe(client, roomName) {
+    subscribe(client, roomName, isOwner) {
         if (!this.rooms.has(roomName)) {
             this.rooms.set(roomName, new Room(roomName));
         }
 
         const room = this.rooms.get(roomName);
+
+        // Check if room already has 2 clients
         if (room.clients.size >= 2) {
-            client.ws.send(JSON.stringify({ action: 'subRejected' }));
+            client.ws.send(JSON.stringify({ action: 'subRejected', reason: 'Only two users allowed in room. Communication disallowed.' }));
+            return;
+        }
+        // Check if owner already exists
+        const ownerExists = Array.from(room.clients).some((c) => c.isOwner);
+        if (isOwner && ownerExists) {
+            client.ws.send(JSON.stringify({ action: 'subRejected', reason: 'Owner already exists in the room' }));
+            return;
+        }
+        // Check if non-owner already exists
+        const nonOwnerExists = Array.from(room.clients).some((c) => !c.isOwner);
+        if (!isOwner && nonOwnerExists) {
+            client.ws.send(JSON.stringify({ action: 'subRejected', reason: 'Non-owner already exists in the room' }));
             return;
         }
 
+        client.isOwner = isOwner;
         room.addClient(client);
         client.room = roomName;
         this.notify(roomName, client, { action: 'newSub', room: roomName });
@@ -103,11 +119,11 @@ wss.on('connection', (ws) => {
     ws.on('message', (data) => {
         try {
             const message = JSON.parse(data);
-            const { action, room } = message;
+            const { action, room, isOwner } = message;
 
             switch (action) {
                 case 'subscribe':
-                    hub.subscribe(client, room);
+                    hub.subscribe(client, room, isOwner);
                     break;
                 case 'unsubscribe':
                     hub.unsubscribe(client);

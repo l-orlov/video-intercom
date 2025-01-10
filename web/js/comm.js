@@ -60,7 +60,7 @@ function initializeWebSocket() {
 
     wsChat.onopen = () => {
         // Subscribe to room
-        wsChat.send(JSON.stringify({ action: 'subscribe', room }));
+        wsChat.send(JSON.stringify({ action: 'subscribe', room, isOwner }));
         showSnackBar("Connected to WebSocket server!", 5000);
     };
 
@@ -95,7 +95,7 @@ function handleWebSocketMessage(event) {
                 break;
         }
     } else if (data.action === "subRejected") {
-        showSnackBar("Only two users allowed in room. Communication disallowed.", 5000);
+        showSnackBar(data.reason, 5000);
     }
 }
 
