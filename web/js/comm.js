@@ -27,7 +27,7 @@ const endCallButton = document.getElementById("endCall");
 // Get room and ownership from query parameters
 const { room, isOwner } = getRoomAndOwnership();
 
-/* Event Listeners */
+// Event Listeners
 window.addEventListener('load', initializeApplication);
 
 function initializeApplication() {
@@ -37,13 +37,13 @@ function initializeApplication() {
     setupButtonEventListeners();
 }
 
-/* Configures initial UI */
+// Configures initial UI
 function setupInitialUI() {
     toggleVideoButton.style.display = "none"; // Hide video toggle for caller
     endCallButton.style.margin = "auto"; // Center end call button
 }
 
-/* Fetches additional ICE servers for fallback and adds them to default list */
+// Fetches additional ICE servers for fallback and adds them to default list
 function fetchAdditionalIceServers() {
     fetch(`${appRoot}Server.php`)
         .then(response => response.json())
@@ -53,7 +53,7 @@ function fetchAdditionalIceServers() {
         .catch(error => console.error("Error fetching ICE servers:", error));
 }
 
-/* Initializes WebSocket connection and sets up event handlers */
+// Initializes WebSocket connection and sets up event handlers
 function initializeWebSocket() {
     wsChat = new WebSocket(`${wsUrl}/`);
 
@@ -70,7 +70,7 @@ function initializeWebSocket() {
     wsChat.onmessage = handleWebSocketMessage;
 }
 
-/* Handles incoming WebSocket messages */
+// Handles incoming WebSocket messages
 function handleWebSocketMessage(event) {
     const data = JSON.parse(event.data);
 
@@ -89,9 +89,6 @@ function handleWebSocketMessage(event) {
             case 'newSub':
                 handleNewSubscriber();
                 break;
-            case 'imOnline':
-                setRemoteStatus('online');
-                break;
             case 'imOffline':
                 handleRemoteOffline();
                 break;
@@ -102,18 +99,15 @@ function handleWebSocketMessage(event) {
 }
 
 function handleNewSubscriber() {
-    setRemoteStatus('online');
-    wsChat.send(JSON.stringify({ action: 'imOnline', room }));
     showSnackBar("Remote joined room.", 10000);
 }
 
 function handleRemoteOffline() {
-    setRemoteStatus('offline');
     endCall();
     showSnackBar("Remote left room.", 10000);
 }
 
-/* Sets up event listeners for buttons */
+// Sets up event listeners for buttons
 function setupButtonEventListeners() {
     endCallButton.addEventListener('click', () => {
         endCall();
@@ -124,7 +118,7 @@ function setupButtonEventListeners() {
     }
 }
 
-/* Extracts room and role from URL parameters and determines ownership */
+// Extracts room and role from URL parameters and determines ownership
 function getRoomAndOwnership() {
     const params = new URLSearchParams(window.location.search);
     const room = params.get("room") || "";
@@ -132,7 +126,7 @@ function getRoomAndOwnership() {
     return { room, isOwner };
 }
 
-/* Starts call */
+// Starts call
 function startCall(isCaller) {
     if (isUnsubscribed) {
         console.warn("Cannot start call: User is unsubscribed.");
@@ -157,7 +151,7 @@ function startCall(isCaller) {
     }
 }
 
-/* Initializes RTCPeerConnection and sets up event handlers */
+// Initializes RTCPeerConnection and sets up event handlers
 function initializePeerConnection() {
     myPC = new RTCPeerConnection(servers);
 
@@ -167,7 +161,7 @@ function initializePeerConnection() {
     myPC.onsignalingstatechange = handleSignalingStateChange;
 }
 
-/* Handles ICE candidate events */
+// Handles ICE candidate events
 function handleIceCandidate(event) {
     if (event.candidate) {
         wsChat.send(JSON.stringify({
@@ -178,13 +172,13 @@ function handleIceCandidate(event) {
     }
 }
 
-/* Handles addition of a remote stream */
+// Handles addition of a remote stream
 function handleRemoteStream(event) {
     const remoteStream = event.streams[0];
     document.getElementById("peerVid").srcObject = remoteStream;
 }
 
-/* Handles changes in ICE connection state */
+// Handles changes in ICE connection state
 function handleIceConnectionStateChange() {
     switch (myPC.iceConnectionState) {
         case 'disconnected':
@@ -199,7 +193,7 @@ function handleIceConnectionStateChange() {
     }
 }
 
-/* Handles changes in signaling state */
+// Handles changes in signaling state
 function handleSignalingStateChange() {
     if (myPC.signalingState === 'closed') {
         console.warn("Signaling state is 'closed'.");
@@ -207,12 +201,12 @@ function handleSignalingStateChange() {
     }
 }
 
-/* Checks browser support for user media */
+// Checks browser support for user media
 function checkUserMediaSupport() {
     return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
 
-//get and set local media
+// Get and set local media
 function setLocalMedia(streamConstraints, isCaller){
     navigator.mediaDevices.getUserMedia(
         streamConstraints
@@ -311,19 +305,6 @@ function description(desc){
         sdp: desc,
         room: room
     }));
-}
-
-//set status of remote (online or offline)
-function setRemoteStatus(status){
-    if(status === 'online'){
-        $("#remoteStatus").css('color', 'green');
-        $("#remoteStatusTxt").css({color:'green'}).html("(Online)");
-    }
-    
-    else{
-        $("#remoteStatus").css('color', '');
-        $("#remoteStatusTxt").css({color:'red'}).html("(Offline)");
-    }
 }
 
 function startTimer() {
