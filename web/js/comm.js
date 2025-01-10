@@ -207,93 +207,79 @@ function checkUserMediaSupport() {
 }
 
 // Get and set local media
-function setLocalMedia(streamConstraints, isCaller){
-    navigator.mediaDevices.getUserMedia(
-        streamConstraints
-    ).then(function(myStream){
-        if (isUnsubscribed) {
-            // Need to stop my stream
-            myStream.getTracks().forEach((track) => track.stop());
-            return;
-        }
-        
-        document.getElementById("myVid").srcObject = myStream;
-        
-        //add my stream to RTCPeerConnection
-        myStream.getTracks().forEach((track)=>{
-            myPC.addTrack(track, myStream);
-        });
-        
-        //set var myMediaStream as stream gotten. Will be used to remove stream later on
-        myMediaStream = myStream;
-
-        // Disable video track initially for owner
-        if (isOwner) {
-            const videoTrack = myMediaStream.getVideoTracks()[0];
-            if (videoTrack) {
-                videoTrack.enabled = false;
+function setLocalMedia(streamConstraints, isCaller) {
+    navigator.mediaDevices.getUserMedia(streamConstraints)
+        .then((myStream) => {
+            if (isUnsubscribed) {
+                // Stop tracks if unsubscribed
+                myStream.getTracks().forEach((track) => track.stop());
+                return;
             }
-        }
-        
-        if(isCaller){
-            myPC.createOffer({
-                offerToReceiveAudio: 1, // Explicitly request audio
-                offerToReceiveVideo: 1  // Explicitly request video
-            }).then(description, function(e){
-                console.log("Error creating offer", e.message);
-                
-                showSnackBar("Call connection failed", 15000);
-            });
-            
-            //then notify callee to start call on his end
-            wsChat.send(JSON.stringify({
-                action: 'startCall',
-                isCaller: false,
-                room: room
-            }));
-        }
-        
-        else{
-            //myPC.createAnswer(description);
-            myPC.createAnswer({
-                offerToReceiveAudio: 1, // Explicitly request audio
-                offerToReceiveVideo: 1  // Explicitly request video
-            }).then(description).catch(function(e){
-                console.log("Error creating answer", e);
-                
-                showSnackBar("Call connection failed", 15000);
-            });
 
-        }
-        
-    }).catch(function(e){
-        
-        switch(e.name){
-            case 'SecurityError':
-                console.log(e.message);
-                
-                showSnackBar("Media sources usage is not supported on this browser/device", 10000);
-                break;
+            // Attach stream to local video element
+            document.getElementById("myVid").srcObject = myStream;
 
-            case 'NotAllowedError':
-                console.log(e.message);
-                
-                showSnackBar("We do not have access to your audio/video sources", 10000);
-                break;
-                
-            case 'NotFoundError':
-                console.log(e.message);
-                
-                showSnackBar("The requested audio/video source cannot be found", 10000);
-                break;
-            
-            case 'NotReadableError':
-            case 'AbortError':
-                console.log(e.message);
-                showSnackBar("Unable to use your media sources", 10000);
-                break;
-        }
+            // Add tracks to RTCPeerConnection
+            myStream.getTracks().forEach((track) => myPC.addTrack(track, myStream));
+            myMediaStream = myStream; // Save the stream for later use
+
+            // Disable video track for owner initially
+            if (isOwner) {
+                const videoTrack = myMediaStream.getVideoTracks()[0];
+                if (videoTrack) videoTrack.enabled = false;
+            }
+
+            // Create offer or answer
+            if (isCaller) {
+                createOffer();
+            } else {
+                createAnswer();
+            }
+        })
+        .catch(handleMediaError);
+}
+
+// Helper function to create offer
+function createOffer() {
+    myPC.createOffer({
+        offerToReceiveAudio: 1, // Explicitly request audio
+        offerToReceiveVideo: 1  // Explicitly request video
+    }).then(description, function(e){
+        console.log("Error creating offer", e.message);
+        
+        showSnackBar("Call connection failed", 15000);
     });
+    
+    // Notify callee to start call on his end
+    wsChat.send(JSON.stringify({
+        action: 'startCall',
+        isCaller: false,
+        room: room
+    }));
+}
+
+// Helper function to create answer
+function createAnswer() {
+    myPC.createAnswer({
+        offerToReceiveAudio: 1, // Explicitly request audio
+        offerToReceiveVideo: 1  // Explicitly request video
+    }).then(description).catch(function(e){
+        console.log("Error creating answer", e);
+        showSnackBar("Call connection failed", 15000);
+    });
+}
+
+// Helper function to handle media access errors
+function handleMediaError(error) {
+    console.error("Media error:", error.message);
+    const errorMessages = {
+        SecurityError: "Media sources usage is not supported on this browser/device",
+        NotAllowedError: "We do not have access to your audio/video sources",
+        NotFoundError: "The requested audio/video source cannot be found",
+        NotReadableError: "Unable to use your media sources",
+        AbortError: "Unable to use your media sources"
+    };
+    showSnackBar(errorMessages[error.name] || "Media access error", 10000);
 }
 
 function description(desc){
