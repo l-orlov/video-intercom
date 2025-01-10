@@ -32,6 +32,7 @@ window.addEventListener('load', initializeApplication);
 
 function initializeApplication() {
     setupInitialUI();
+    startTimer();
     fetchAdditionalIceServers();
     initializeWebSocket();
     setupButtonEventListeners();
@@ -132,8 +133,6 @@ function startCall(isCaller) {
         console.warn("Cannot start call: User is unsubscribed.");
         return;
     }
-
-    startTimer();
 
     if (!checkUserMediaSupport()) {
         showSnackBar("Your browser does not support video calls.", 30000);
