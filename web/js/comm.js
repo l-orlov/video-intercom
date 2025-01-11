@@ -84,25 +84,11 @@ window.addEventListener('load', function(){
                     break;
                     
                 case 'newSub':
-                    setRemoteStatus('online');
-
-                    //once the other user joined and current user has been notified, current user should also send a signal
-                    //that he is online
-                    wsChat.send(JSON.stringify({
-                        action: 'imOnline',
-                        room: room
-                    }));
-
                     showSnackBar("Remote entered room", 10000);
                     
                     break;
                     
-                case 'imOnline':
-                    setRemoteStatus('online');
-                    break;
-                    
                 case 'imOffline':
-                    setRemoteStatus('offline');
                     // Show message
                     showSnackBar("Remote left room", 10000);
                     // End call by remote
@@ -310,19 +296,6 @@ function description(desc){
         sdp: desc,
         room: room
     }));
-}
-
-//set the status of remote (online or offline)
-function setRemoteStatus(status){
-    if(status === 'online'){
-        $("#remoteStatus").css('color', 'green');
-        $("#remoteStatusTxt").css({color:'green'}).html("(Online)");
-    }
-    
-    else{
-        $("#remoteStatus").css('color', '');
-        $("#remoteStatusTxt").css({color:'red'}).html("(Offline)");
-    }
 }
 
 function startTimer() {
