@@ -30,83 +30,16 @@ const remoteVideoElement = document.getElementById("video-remote"); // Remote vi
 // Get room and ownership from query parameters
 const { room, isOwner } = getRoomAndOwnership();
 
-window.addEventListener('load', function(){
+// Event Listeners
+window.addEventListener('load', initializeApplication);
+
+function initializeApplication() {
     setupInitialLayout();
-    fetchAdditionalIceServers();
     startTimer();
-
-    wsChat = new WebSocket(`${wsUrl}/`);
-   
-    wsChat.onopen = function(){
-        //subscribe to room
-        wsChat.send(JSON.stringify({
-            action: 'subscribe',
-            room: room,
-            isOwner: isOwner
-        }));
-        
-        showSnackBar("Connected to the ws server!", 5000);
-    };
-    
-    wsChat.onerror = function(){
-        showSnackBar("Unable to connect to the ws server! Kindly refresh", 20000);
-    };
-    
-    wsChat.onmessage = function(e){
-        var data = JSON.parse(e.data);
-
-        if(data.room === room){
-            //above check is not necessary since all messages coming to this user are for the user's current room
-            //but just to be on the safe side
-            switch(data.action){
-                case 'startCall':
-                    // start call by message from server
-                    const { isCaller } = data;
-                    startCall(isCaller);
-                    break;
-
-                case 'candidate':
-                    //message is iceCandidate
-                    myPC ? myPC.addIceCandidate(new RTCIceCandidate(data.candidate)) : "";
-                    break;
-
-                case 'sdp':
-                    //message is signal description
-                    myPC ? myPC.setRemoteDescription(new RTCSessionDescription(data.sdp)) : "";
-                    break;
-                    
-                case 'newSub':
-                    handleNewSubscriber();
-                    break;
-
-                case 'imOffline':
-                    handleRemoteOffline();
-                    break;
-
-                case 'toggleVideo':
-                    updateLayoutByRemoteVideo(data.isVideoEnabled);
-                    break;
-            }  
-        }
-        
-        else if(data.action === "subRejected"){
-            //subscription on this device rejected cos user has subscribed on another device/browser
-            showSnackBar("Maximum of two users allowed in room. Communication disallowed", 5000);
-        }
-    };
-
-    // On click end call
-    document.getElementById("end-call").addEventListener('click', function(e){
-        endCall();
-    });
-
-    // On click toggle video for owner
-    if (isOwner) {
-        toggleVideoButton.addEventListener("click", function () {
-            toggleVideoStream();
-        });
-    }
-});
+    fetchAdditionalIceServers();
+    initializeWebSocket();
+    setupButtonEventListeners();
+}
 
 // Configures initial layout
 function setupInitialLayout() {
@@ -130,12 +63,53 @@ function fetchAdditionalIceServers() {
         .catch(error => console.error("Error fetching ICE servers:", error));
 }
 
-// Extracts room and role from URL parameters and determines ownership
-function getRoomAndOwnership() {
-    const params = new URLSearchParams(window.location.search);
-    const room = params.get("room") || "";
-    const isOwner = params.get("role") === "owner"; // Determine ownership
-    return { room, isOwner };
+// Initializes WebSocket connection and sets up event handlers
+function initializeWebSocket() {
+    wsChat = new WebSocket(`${wsUrl}/`);
+
+    wsChat.onopen = () => {
+        // Subscribe to room
+        wsChat.send(JSON.stringify({ action: 'subscribe', room, isOwner }));
+        showSnackBar("Connected to WebSocket server!", 5000);
+    };
+
+    wsChat.onerror = () => {
+        showSnackBar("Unable to connect to WebSocket server. Please refresh.", 20000);
+    };
+
+    wsChat.onmessage = handleWebSocketMessage;
+}
+
+// Handles incoming WebSocket messages
+function handleWebSocketMessage(event) {
+    const data = JSON.parse(event.data);
+
+    if (data.room === room) {
+        switch (data.action) {
+            case 'startCall':
+                // Start call by message from server
+                startCall(data.isCaller);
+                break;
+            case 'candidate':
+                if (myPC) myPC.addIceCandidate(new RTCIceCandidate(data.candidate));
+                break;
+            case 'sdp':
+                if (myPC) myPC.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                break;
+            case 'newSub':
+                handleNewSubscriber();
+                break;
+            case 'imOffline':
+                handleRemoteOffline();
+                break;
+            case 'toggleVideo':
+                console.log("here toggleVideo", data)
+                updateLayoutByRemoteVideo(data.isVideoEnabled);
+                break;
+        }
+    } else if (data.action === "subRejected") {
+        showSnackBar(data.reason, 5000);
+    }
 }
 
 function handleNewSubscriber() {
@@ -152,166 +126,182 @@ function handleRemoteOffline() {
     }
 }
 
-function startCall(isCaller){
-    if (isUnsubscribed) {
-        // Can not start call
-        return
-    }
-
-    if(checkUserMediaSupport){
-        myPC = new RTCPeerConnection(servers);//RTCPeerconnection obj
-        
-        //When my ice candidates become available
-        myPC.onicecandidate = function(e){
-            if(e.candidate){
-                //send my candidate to peer
-                wsChat.send(JSON.stringify({
-                    action: 'candidate',
-                    candidate: e.candidate,
-                    room: room
-                }));
-            }
-        };
-    
-        //When remote stream becomes available
-        myPC.ontrack = function(e){
-            const stream = e.streams[0];
-            remoteVideoElement.srcObject = stream;
-        };
-        
-        //when remote connection state and ice agent is closed
-        myPC.oniceconnectionstatechange = function(){
-            switch(myPC.iceConnectionState){
-                case 'disconnected':
-                case 'failed':
-                    console.log("Ice connection state is failed/disconnected");
-                    showSnackBar("Call connection problem", 15000);
-                    break;
-                    
-                case 'closed':
-                    console.log("Ice connection state is 'closed'");
-                    showSnackBar("Call connection closed", 15000);
-                    break;
-            }
-        };
-        
-        
-        //WHEN REMOTE CLOSES CONNECTION
-        myPC.onsignalingstatechange = function(){
-            switch(myPC.signalingState){
-                case 'closed':
-                    console.log("Signalling state is 'closed'");
-                    showSnackBar("Signal lost", 15000);
-                    break;
-            }
-        };
-        
-        //set local media
-        setLocalMedia(streamConstraints, isCaller);
-
-        // Show video button for owner
-        if (isOwner) {
-            showVideoButtonForOwner();
-        }
-    }
-    
-    else{
-        showSnackBar("Your browser does not support video call", 30000);
-    }
-}
-
-function checkUserMediaSupport(){
-    return !!(navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
-}
-
-//get and set local media
-function setLocalMedia(streamConstraints, isCaller){
-    navigator.mediaDevices.getUserMedia(
-        streamConstraints
-    ).then(function(myStream){
-        if (isUnsubscribed) {
-            // Need to stop my stream
-            myStream.getTracks().forEach((track) => track.stop());
-            return;
-        }
-        
-        localVideoElement.srcObject = myStream;
-        
-        //add my stream to RTCPeerConnection
-        myStream.getTracks().forEach((track)=>{
-            myPC.addTrack(track, myStream);
-        });
-        
-        //set var myMediaStream as the stream gotten. Will be used to remove stream later on
-        myMediaStream = myStream;
-
-        // Disable video track initially for owner
-        if (isOwner) {
-            const videoTrack = myMediaStream.getVideoTracks()[0];
-            if (videoTrack) {
-                videoTrack.enabled = false;
-            }
-        }
-        
-        if(isCaller){
-            myPC.createOffer({
-                offerToReceiveAudio: 1, // Explicitly request audio
-                offerToReceiveVideo: 1  // Explicitly request video
-            }).then(description, function(e){
-                console.log("Error creating offer", e.message);
-                
-                showSnackBar("Call connection failed", 15000);
-            });
-            
-            //then notify callee to start call on his end
-            wsChat.send(JSON.stringify({
-                action: 'startCall',
-                isCaller: false,
-                room: room
-            }));
-        }
-        
-        else{
-            //myPC.createAnswer(description);
-            myPC.createAnswer({
-                offerToReceiveAudio: 1, // Explicitly request audio
-                offerToReceiveVideo: 1  // Explicitly request video
-            }).then(description).catch(function(e){
-                console.log("Error creating answer", e);
-                
-                showSnackBar("Call connection failed", 15000);
-            });
-
-        }
-        
-    }).catch(function(e){
-        
-        switch(e.name){
-            case 'SecurityError':
-                console.log(e.message);
-                
-                showSnackBar("Media sources usage is not supported on this browser/device", 10000);
-                break;
-
-            case 'NotAllowedError':
-                console.log(e.message);
-                
-                showSnackBar("We do not have access to your audio/video sources", 10000);
-                break;
-                
-            case 'NotFoundError':
-                console.log(e.message);
-                
-                showSnackBar("The requested audio/video source cannot be found", 10000);
-                break;
-            
-            case 'NotReadableError':
-            case 'AbortError':
-                console.log(e.message);
-                showSnackBar("Unable to use your media sources", 10000);
-                break;
-        }
+// Sets up event listeners for buttons
+function setupButtonEventListeners() {
+    endCallButton.addEventListener('click', () => {
+        endCall();
     });
+
+    if (isOwner) {
+        toggleVideoButton.addEventListener('click', toggleVideoStream);
+    }
+}
+
+// Extracts room and role from URL parameters and determines ownership
+function getRoomAndOwnership() {
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get("room") || "";
+    const isOwner = params.get("role") === "owner"; // Determine ownership
+    return { room, isOwner };
+}
+
+// Starts call
+function startCall(isCaller) {
+    if (isUnsubscribed) {
+        console.warn("Cannot start call: User is unsubscribed.");
+        return;
+    }
+
+    if (!checkUserMediaSupport()) {
+        showSnackBar("Your browser does not support video calls.", 30000);
+        return;
+    }
+
+    initializePeerConnection();
+
+    // Set up local media
+    setLocalMedia(streamConstraints, isCaller);
+
+    // Show video toggle button for owner
+    if (isOwner) {
+        showVideoButtonForOwner();
+    }
+}
+
+// Initializes RTCPeerConnection and sets up event handlers
+function initializePeerConnection() {
+    myPC = new RTCPeerConnection(servers);
+
+    myPC.onicecandidate = handleIceCandidate;
+    myPC.ontrack = handleRemoteStream;
+    myPC.oniceconnectionstatechange = handleIceConnectionStateChange;
+    myPC.onsignalingstatechange = handleSignalingStateChange;
+}
+
+// Handles ICE candidate events
+function handleIceCandidate(event) {
+    if (event.candidate) {
+        wsChat.send(JSON.stringify({
+            action: 'candidate',
+            candidate: event.candidate,
+            room: room
+        }));
+    }
+}
+
+// Handles addition of a remote stream
+function handleRemoteStream(event) {
+    const remoteStream = event.streams[0];
+    remoteVideoElement.srcObject = remoteStream;
+
+    // Update layout
+    // if (!isOwner) {
+    //     updateRemoteVideoLayout();
+    // }
+}
+
+// Handles changes in ICE connection state
+function handleIceConnectionStateChange() {
+    switch (myPC.iceConnectionState) {
+        case 'disconnected':
+        case 'failed':
+            console.warn("ICE connection state failed or disconnected.");
+            showSnackBar("Call connection problem", 15000);
+            break;
+        case 'closed':
+            console.log("ICE connection state closed.");
+            showSnackBar("Call connection closed", 15000);
+            break;
+    }
+}
+
+// Handles changes in signaling state
+function handleSignalingStateChange() {
+    if (myPC.signalingState === 'closed') {
+        console.warn("Signaling state is 'closed'.");
+        showSnackBar("Signal lost", 15000);
+    }
+}
+
+// Checks browser support for user media
+function checkUserMediaSupport() {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+}
+
+// Get and set local media
+function setLocalMedia(streamConstraints, isCaller) {
+    navigator.mediaDevices.getUserMedia(streamConstraints)
+        .then((myStream) => {
+            if (isUnsubscribed) {
+                // Stop tracks if unsubscribed
+                myStream.getTracks().forEach((track) => track.stop());
+                return;
+            }
+
+            // Attach stream to local video element
+            localVideoElement.srcObject = myStream;
+
+            // Add tracks to RTCPeerConnection
+            myStream.getTracks().forEach((track) => myPC.addTrack(track, myStream));
+            myMediaStream = myStream; // Save stream for later use
+
+            // Disable video track for owner initially
+            if (isOwner) {
+                const videoTrack = myMediaStream.getVideoTracks()[0];
+                if (videoTrack) videoTrack.enabled = false;
+            }
+
+            // Create offer or answer
+            if (isCaller) {
+                createOffer();
+            } else {
+                createAnswer();
+            }
+        })
+        .catch(handleMediaError);
+}
+
+// Helper function to create offer
+function createOffer() {
+    myPC.createOffer({
+        offerToReceiveAudio: 1, // Explicitly request audio
+        offerToReceiveVideo: 1  // Explicitly request video
+    }).then(description, function(e){
+        console.log("Error creating offer", e.message);
+        
+        showSnackBar("Call connection failed", 15000);
+    });
+    
+    // Notify callee to start call on his end
+    wsChat.send(JSON.stringify({
+        action: 'startCall',
+        isCaller: false,
+        room: room
+    }));
+}
+
+// Helper function to create answer
+function createAnswer() {
+    myPC.createAnswer({
+        offerToReceiveAudio: 1, // Explicitly request audio
+        offerToReceiveVideo: 1  // Explicitly request video
+    }).then(description).catch(function(e){
+        console.log("Error creating answer", e);
+        showSnackBar("Call connection failed", 15000);
+    });
+}
+
+// Helper function to handle media access errors
+function handleMediaError(error) {
+    console.error("Media error:", error.message);
+    const errorMessages = {
+        SecurityError: "Media sources usage is not supported on this browser/device",
+        NotAllowedError: "We do not have access to your audio/video sources",
+        NotFoundError: "The requested audio/video source cannot be found",
+        NotReadableError: "Unable to use your media sources",
+        AbortError: "Unable to use your media sources"
+    };
+    showSnackBar(errorMessages[error.name] || "Media access error", 10000);
 }
 
 function description(desc){
@@ -339,7 +329,7 @@ function startTimer() {
     minElem.innerHTML = "00";
     secElem.innerHTML = "00";
 
-    // Start the interval
+    // Start interval
     timerInterval = setInterval(() => {
         sec++;
 
@@ -364,8 +354,8 @@ function startTimer() {
 
 function stopTimer() {
     if (timerInterval) {
-        clearInterval(timerInterval); // Stop the interval
-        timerInterval = null; // Reset the interval ID
+        clearInterval(timerInterval); // Stop interval
+        timerInterval = null; // Reset interval ID
     }
 }
 
@@ -379,16 +369,15 @@ function showSnackBar(msg, displayTime){
 }
 
 function endCall(){
-    // Close the peer connection
+    // Close peer connection
     if (myPC) {
         myPC.close();
-        myPC = null; // Reset the RTCPeerConnection object
+        myPC = null; // Reset RTCPeerConnection object
     }
 
-    // Stop the timer
     stopTimer();
 
-    // Stop the local media stream
+    // Stop local media stream
     stopMediaStream();
 
     // Clear video elements
@@ -410,13 +399,13 @@ function endCall(){
 }
 
 function endCallByRemote(){
-    // Close the peer connection
+    // Close peer connection
     if (myPC) {
         myPC.close();
-        myPC = null; // Reset the RTCPeerConnection object
+        myPC = null; // Reset RTCPeerConnection object
     }
 
-    // Stop the local media stream
+    // Stop local media stream
     stopMediaStream();
 
     // Clear video elements
@@ -429,10 +418,10 @@ function endCallByRemote(){
 
 function stopMediaStream(){    
     if (myMediaStream && myMediaStream.getTracks().length) {
-        // Stop all tracks in the media stream
+        // Stop all tracks in media stream
         myMediaStream.getTracks().forEach((track) => track.stop());
     }
-    myMediaStream = null; // Reset the media stream variable
+    myMediaStream = null; // Reset media stream variable
 }
 
 function toggleVideoStream() {
@@ -457,32 +446,6 @@ function toggleVideoStream() {
 
         // Update layout
         updateLayoutByLocalVideo(isLocalVideoEnabled);
-    } else {
-        // No video track exists; try to add one
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then((stream) => {
-                const newVideoTrack = stream.getVideoTracks()[0];
-
-                if (newVideoTrack) {
-                    // Add the new video track to myMediaStream
-                    myMediaStream.addTrack(newVideoTrack);
-
-                    // Replace the video track in the PeerConnection
-                    const sender = myPC.getSenders().find(s => s.track && s.track.kind === "video");
-                    if (sender) {
-                        sender.replaceTrack(newVideoTrack);
-                    } else {
-                        myPC.addTrack(newVideoTrack, myMediaStream);
-                    }
-
-                    // Update layout
-                    updateLayoutByLocalVideo(true);
-                }
-            })
-            .catch((err) => {
-                console.error("Error accessing video: ", err);
-                showSnackBar("Unable to access video", 5000);
-            });
     }
 }
 
@@ -514,10 +477,10 @@ function updateLayoutByRemoteVideo(isRemoteVideoEnabled) {
     }
 }
 
-// Function to show the video button for owner when call starts
+// Function to show video button for owner when call starts
 function showVideoButtonForOwner() {
     if (isOwner) {
-        toggleVideoButton.style.display = "inline-block"; // Show the button
+        toggleVideoButton.style.display = "inline-block"; // Show button
         endCallButton.style.margin = ""; // Reset margin for proper alignment of both buttons
     }
 }
