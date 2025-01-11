@@ -3,7 +3,7 @@
 }
 
 /* VIDEO */
-#peerVid {
+#video-remote {
     position: fixed; /* Fixes the video relative to the viewport */
     top: 50%; /* Positions the video in the vertical center */
     left: 50%; /* Positions the video in the horizontal center */
@@ -15,7 +15,7 @@
     background: black; /* Adds a black background for any empty areas */
 }
 
-#myVid {
+#video-local {
     position: fixed; /* Fixes the video relative to the screen */
     bottom: 0;       /* Aligns the video to the bottom edge */
     right: 0;        /* Aligns the video to the right edge */
@@ -25,18 +25,18 @@
     z-index: 1000;   /* Ensures the video stays above other elements */
     opacity: 1;      /* Fully visible by default */
     visibility: visible; /* Element is visible */
-    transition: opacity 0.5s ease, visibility 0.5s ease; /* Smooth transition */
+    transition: opacity 0.8s ease-in-out, visibility 0.8s ease-in-out; /* Smooth transition */
 }
 
 /* Video hidden */
-#myVid.hidden {
+#video-local.hidden {
     opacity: 0;          /* Fully transparent */
     visibility: hidden;  /* Removed from the document flow */
 }
 
 /* Adaptation for smaller screens */
 @media (max-width: 768px) {
-    #myVid {
+    #video-local {
         width: 50%; /* Increases width to 50% on smaller screens */
         max-height: 40%; /* Increases maximum height to 40% for better visibility */
     }
@@ -89,7 +89,7 @@
 /* _SNACKBAR */
 
 /* CONTROL BUTTONS */
-#controlButtonsContainer {
+#control-buttons-container {
     position: fixed;
     bottom: 20px;
     left: 50%;
@@ -102,7 +102,7 @@
 }
 
 /* Disable hover effect for disabled buttons */
-#controlButtonsContainer button:disabled:hover {
+#control-buttons-container button:disabled:hover {
     transform: none; /* Prevent size change */
     background-color: grey; /* Ensure it stays grey */
     color: white; /* Ensure the text/icon stays white */
@@ -110,7 +110,7 @@
 }
 
 /* END CALL BUTTON */
-#endCall {
+#end-call {
     background-color: red;
     color: white;
     border: none;
@@ -122,12 +122,12 @@
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-#endCall:hover {
+#end-call:hover {
     background-color: darkred;
     transform: scale(1.1);
 }
 
-#endCall:disabled {
+#end-call:disabled {
     background-color: grey;
     color: white;
     cursor: not-allowed;
@@ -137,7 +137,7 @@
 
 /* TOGGLE VIDEO BUTTON */
 /* Video off */
-#toggleVideo {
+#toggle-video {
     background-color: #ffffff; /* White background */
     color: #6C6C6C; /* Gray center */
     border: none;
@@ -150,18 +150,18 @@
 }
 
 /* Video on */
-#toggleVideo.btn-enabled {
+#toggle-video.btn-enabled {
     background-color: #6C6C6C; /* Gray background */
     color: #ffffff; /* White icon */
 }
 
-#toggleVideo:hover {
+#toggle-video:hover {
     background-color: #6C6C6C;
     color: #ffffff;
     transform: scale(1.1);
 }
 
-#toggleVideo:disabled {
+#toggle-video:disabled {
     background-color: grey;
     color: white;
     cursor: not-allowed;

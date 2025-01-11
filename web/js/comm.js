@@ -21,11 +21,11 @@ let isUnsubscribed = false; // Tracks subscription status (if true can not start
 let timerInterval = null; // Tracks call duration
 
 // Buttons for call control
-const toggleVideoButton = document.getElementById("toggleVideo"); // Button to toggle video on/off
-const endCallButton = document.getElementById("endCall"); // Button to end the video call
+const toggleVideoButton = document.getElementById("toggle-video"); // Button to toggle video on/off
+const endCallButton = document.getElementById("end-call"); // Button to end the video call
 // Video elements
-const localVideoElement = document.getElementById("myVid"); // Local video stream element
-const remoteVideoElement = document.getElementById("peerVid"); // Remote video stream element
+const localVideoElement = document.getElementById("video-local"); // Local video stream element
+const remoteVideoElement = document.getElementById("video-remote"); // Remote video stream element
 
 // Get room and ownership from query parameters
 const { room, isOwner } = getRoomAndOwnership();
