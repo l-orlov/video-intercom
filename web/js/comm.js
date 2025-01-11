@@ -47,7 +47,7 @@ function setupInitialLayout() {
     endCallButton.style.margin = "auto"; // Center end call button
 
     if (isOwner) {
-        localVideoElement.classList.add("hidden"); // Hide local video by default for owner
+        localVideoElement.style.display = "none"; // Hide local video by default for owner
     } else {
         updateLayoutByRemoteVideo(false); // Full-screen local video by default for non-owner
     }
@@ -453,10 +453,10 @@ function toggleVideoStream() {
 function updateLayoutByLocalVideo(isLocalVideoEnabled) {
     if (isLocalVideoEnabled) {
         toggleVideoButton.classList.add("btn-enabled");
-        localVideoElement.classList.remove("hidden");
+        localVideoElement.style.display = "block";
     } else {
         toggleVideoButton.classList.remove("btn-enabled");
-        localVideoElement.classList.add("hidden");
+        localVideoElement.style.display = "none";
     }
 }
 

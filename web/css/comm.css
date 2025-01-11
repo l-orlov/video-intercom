@@ -22,7 +22,7 @@
     width: 30%;      /* Sets width to 30% of screen width */
     height: auto;    /* Maintains aspect ratio by auto-calculating height */
     max-height: 30%; /* Restricts maximum height to 30% of screen height */
-    z-index: 1000;   /* Ensures video stays above other elements */
+    z-index: -100;   /* Ensures video stays above other elements */
     opacity: 1;      /* Fully visible by default */
     visibility: visible; /* Element is visible */
     transition: opacity 0.8s ease-in-out, visibility 0.8s ease-in-out; /* Smooth transition */
@@ -38,12 +38,6 @@
     max-height: none; /* Remove height restriction */
     transform: translate(-50%, -50%); /* Centers video */
     background: black; /* Adds a black background for any empty areas */
-}
-
-/* Hidden local video  */
-#video-local.hidden {
-    opacity: 0;          /* Fully transparent */
-    visibility: hidden;  /* Removed from document flow */
 }
 
 /* Adaptation for smaller screens */
