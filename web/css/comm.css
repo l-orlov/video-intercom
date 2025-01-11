@@ -37,6 +37,7 @@
     height: 100%;
     max-height: none; /* Remove height restriction */
     transform: translate(-50%, -50%); /* Centers video */
+    background: black; /* Adds a black background for any empty areas */
 }
 
 /* Hidden local video  */

@@ -119,10 +119,9 @@ wss.on('connection', (ws) => {
     ws.on('message', (data) => {
         try {
             const message = JSON.parse(data);
-            const { action, room, isOwner } = message;
-
-            switch (action) {
+            switch (message.action) {
                 case 'subscribe':
+                    const { room, isOwner } = message;
                     hub.subscribe(client, room, isOwner);
                     break;
                 case 'unsubscribe':

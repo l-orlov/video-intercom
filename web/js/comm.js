@@ -48,6 +48,8 @@ function setupInitialLayout() {
 
     if (isOwner) {
         localVideoElement.classList.add("hidden"); // Hide local video by default for owner
+    } else {
+        updateLayoutByRemoteVideo(false); // Full-screen local video by default for non-owner
     }
 }
 
@@ -100,6 +102,10 @@ function handleWebSocketMessage(event) {
             case 'imOffline':
                 handleRemoteOffline();
                 break;
+            case 'toggleVideo':
+                console.log("here toggleVideo", data)
+                updateLayoutByRemoteVideo(data.isVideoEnabled);
+                break;
         }
     } else if (data.action === "subRejected") {
         showSnackBar(data.reason, 5000);
@@ -113,6 +119,11 @@ function handleNewSubscriber() {
 function handleRemoteOffline() {
     endCallByRemote();
     showSnackBar("Remote left room.", 10000);
+
+    if (isOwner) {
+        // Update layout
+        updateLayoutByLocalVideo(false);
+    }
 }
 
 // Sets up event listeners for buttons
@@ -426,49 +437,39 @@ function toggleVideoStream() {
         const isLocalVideoEnabled = !videoTrack.enabled;
         videoTrack.enabled = isLocalVideoEnabled;
 
+        // Send toggle video signal
+        wsChat.send(JSON.stringify({
+            action: "toggleVideo",
+            isVideoEnabled: isLocalVideoEnabled,
+            room: room
+        }));
+
         // Update layout
-        updateToggleVideoLayout(isLocalVideoEnabled);
-        updateLocalVideoLayout(isLocalVideoEnabled);
+        updateLayoutByLocalVideo(isLocalVideoEnabled);
     }
 }
 
-/** Updates toggle video button layout based on state */
-function updateToggleVideoLayout(isLocalVideoEnabled) {
+/** Updates layout by local video state */
+function updateLayoutByLocalVideo(isLocalVideoEnabled) {
     if (isLocalVideoEnabled) {
         toggleVideoButton.classList.add("btn-enabled");
-    } else {
-        toggleVideoButton.classList.remove("btn-enabled");
-    }
-}
-
-/** Updates local video layout based on state */
-function updateLocalVideoLayout(isLocalVideoEnabled) {
-    if (isLocalVideoEnabled) {
         localVideoElement.classList.remove("hidden");
     } else {
+        toggleVideoButton.classList.remove("btn-enabled");
         localVideoElement.classList.add("hidden");
     }
 }
 
-/** Updates remote video layout based on state */
-// function updateRemoteVideoLayout() {
-//     console.log("here", remoteVideoElement.srcObject);
-
-//     const hasRemoteStream = remoteVideoElement.srcObject;
-//     console.log("hasRemoteStream", hasRemoteStream)
-//     const remoteVideoTrack = hasRemoteStream ? hasRemoteStream.getVideoTracks()[0] : null;
-//     console.log("remoteVideoTrack", remoteVideoTrack)
-//     const isRemoteVideoEnabled = remoteVideoTrack ? remoteVideoTrack.enabled : false;
-//     console.log("isRemoteVideoEnabled", isRemoteVideoEnabled)
-
-//     if (!isRemoteVideoEnabled) {
-//         console.log("here1");
-//         localVideoElement.classList.add("full-screen");
-//     } else {
-//         console.log("here2");
-//         localVideoElement.classList.remove("full-screen");
-//     }
-// }
+/** Updates layout by remote video state */
+function updateLayoutByRemoteVideo(isRemoteVideoEnabled) {
+    if (!isRemoteVideoEnabled) {
+        localVideoElement.classList.add("full-screen");
+        remoteVideoElement.style.display = "none";
+    } else {
+        localVideoElement.classList.remove("full-screen");
+        remoteVideoElement.style.display = "block";
+    }
+}
 
 // Function to show video button for owner when call starts
 function showVideoButtonForOwner() {
