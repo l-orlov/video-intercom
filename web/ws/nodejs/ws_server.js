@@ -45,13 +45,13 @@ class Hub {
         // Check if owner already exists
         const ownerExists = Array.from(room.clients).some((c) => c.isOwner);
         if (isOwner && ownerExists) {
-            client.ws.send(JSON.stringify({ action: 'subRejected', reason: 'Owner already exists in the room' }));
+            client.ws.send(JSON.stringify({ action: 'subRejected', reason: 'Owner already exists in room' }));
             return;
         }
         // Check if non-owner already exists
         const nonOwnerExists = Array.from(room.clients).some((c) => !c.isOwner);
         if (!isOwner && nonOwnerExists) {
-            client.ws.send(JSON.stringify({ action: 'subRejected', reason: 'Non-owner already exists in the room' }));
+            client.ws.send(JSON.stringify({ action: 'subRejected', reason: 'Non-owner already exists in room' }));
             return;
         }
 
@@ -60,11 +60,11 @@ class Hub {
         client.room = roomName;
         this.notify(roomName, client, { action: 'newSub', room: roomName });
 
-        // If there are now 2 participants in the room, initiate the call process
+        // If there are now 2 participants in room, initiate call process
         if (room.clients.size === 2) {
             const caller = room.clients.values().next().value;
 
-            // Notify the first participant (caller) to start call
+            // Notify first participant (caller) to start call
             caller.ws.send(JSON.stringify({ action: 'startCall', isCaller: true, room: roomName }));
         }
     }

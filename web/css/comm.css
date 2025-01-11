@@ -4,34 +4,45 @@
 
 /* VIDEO */
 #video-remote {
-    position: fixed; /* Fixes the video relative to the viewport */
-    top: 50%; /* Positions the video in the vertical center */
-    left: 50%; /* Positions the video in the horizontal center */
-    width: 100%; /* Sets the width to 100% of the viewport */
-    height: 100%; /* Sets the height to 100% of the viewport */
-    object-fit: contain; /* Ensures the entire video fits within the container */
-    transform: translate(-50%, -50%); /* Centers the video */
-    z-index: -100; /* Places the video behind other elements */
+    position: fixed; /* Fixes video relative to viewport */
+    top: 50%; /* Positions video in vertical center */
+    left: 50%; /* Positions video in horizontal center */
+    width: 100%; /* Sets width to 100% of viewport */
+    height: 100%; /* Sets height to 100% of viewport */
+    object-fit: contain; /* Ensures entire video fits within container */
+    transform: translate(-50%, -50%); /* Centers video */
+    z-index: -100; /* Places video behind other elements */
     background: black; /* Adds a black background for any empty areas */
 }
 
 #video-local {
-    position: fixed; /* Fixes the video relative to the screen */
-    bottom: 0;       /* Aligns the video to the bottom edge */
-    right: 0;        /* Aligns the video to the right edge */
-    width: 30%;      /* Sets the width to 30% of the screen width */
+    position: fixed; /* Fixes video relative to screen */
+    bottom: 0;       /* Aligns video to bottom edge */
+    right: 0;        /* Aligns video to right edge */
+    width: 30%;      /* Sets width to 30% of screen width */
     height: auto;    /* Maintains aspect ratio by auto-calculating height */
-    max-height: 30%; /* Restricts the maximum height to 30% of the screen height */
-    z-index: 1000;   /* Ensures the video stays above other elements */
+    max-height: 30%; /* Restricts maximum height to 30% of screen height */
+    z-index: 1000;   /* Ensures video stays above other elements */
     opacity: 1;      /* Fully visible by default */
     visibility: visible; /* Element is visible */
     transition: opacity 0.8s ease-in-out, visibility 0.8s ease-in-out; /* Smooth transition */
 }
 
-/* Video hidden */
+/* Full-screen local video */
+#video-local.full-screen {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    max-height: none; /* Remove height restriction */
+    transform: translate(-50%, -50%); /* Centers video */
+}
+
+/* Hidden local video  */
 #video-local.hidden {
     opacity: 0;          /* Fully transparent */
-    visibility: hidden;  /* Removed from the document flow */
+    visibility: hidden;  /* Removed from document flow */
 }
 
 /* Adaptation for smaller screens */
@@ -45,7 +56,7 @@
 /* _VIDEO */
 
 /* SNACKBAR */
-/* The snackbar - position it at the bottom and in the middle of the screen */
+/* The snackbar - position it at bottom and in middle of screen */
 #snackbar {
     visibility: hidden; /* Hidden by default. Visible on click */
     min-width: 250px; /* Set a default minimum width */
@@ -55,18 +66,18 @@
     text-align: center; /* Centered text */
     border-radius: 2px; /* Rounded borders */
     padding: 16px; /* Padding */
-    position: fixed; /* Sit on top of the screen */
+    position: fixed; /* Sit on top of screen */
     z-index: 1; /* Add a z-index if needed */
-    right: 0; /* Right the snackbar */
-    top: 90px; /* 90px from the top */
+    right: 0; /* Right snackbar */
+    top: 90px; /* 90px from top */
 }
 
-/* Show the snackbar when clicking on a button (class added with JavaScript) */
+/* Show snackbar when clicking on a button (class added with JavaScript) */
 #snackbar.show {
-    visibility: visible; /* Show the snackbar */
+    visibility: visible; /* Show snackbar */
 }
 
-/* Animations to fade the snackbar in and out */
+/* Animations to fade snackbar in and out */
 @-webkit-keyframes fadein {
     from {right: 0; opacity: 0;} 
     to {top: 90px; opacity: 1;}
@@ -105,8 +116,8 @@
 #control-buttons-container button:disabled:hover {
     transform: none; /* Prevent size change */
     background-color: grey; /* Ensure it stays grey */
-    color: white; /* Ensure the text/icon stays white */
-    cursor: not-allowed; /* Keep the not-allowed cursor */
+    color: white; /* Ensure text/icon stays white */
+    cursor: not-allowed; /* Keep not-allowed cursor */
 }
 
 /* END CALL BUTTON */

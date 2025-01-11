@@ -15,7 +15,7 @@ class Server
 
     private function getCachedIceServers()
     {
-        // Ensure the cache file exists and is initialized
+        // Ensure cache file exists and is initialized
         $this->ensureCacheFileExists();
 
         // Use a lock to ensure safe read/write
@@ -34,9 +34,9 @@ class Server
         $fileContents = file_get_contents($this->cacheFile);
         $isCacheValid = $fileContents !== false && (time() - filemtime($this->cacheFile)) < $this->cacheDuration;
 
-        // If cache is valid, return the cached content
+        // If cache is valid, return cached content
         if ($isCacheValid && $fileContents) {
-            flock($fp, LOCK_UN); // Release the lock
+            flock($fp, LOCK_UN); // Release lock
             fclose($fp);
             return $fileContents;
         }
@@ -47,21 +47,21 @@ class Server
             throw new RuntimeException("Failed to acquire exclusive lock on file: {$this->cacheFile}");
         }
 
-        // Fetch new data and write it to the cache
+        // Fetch new data and write it to cache
         $servers = $this->getIceServers();
         if (!$servers || json_decode($servers) === null) {
-            flock($fp, LOCK_UN); // Release the lock
+            flock($fp, LOCK_UN); // Release lock
             fclose($fp);
             throw new RuntimeException("Failed to fetch ICE server data");
         }
 
         if (file_put_contents($this->cacheFile, $servers) === false) {
-            flock($fp, LOCK_UN); // Release the lock
+            flock($fp, LOCK_UN); // Release lock
             fclose($fp);
             throw new RuntimeException("Failed to write to cache file: {$this->cacheFile}");
         }
 
-        flock($fp, LOCK_UN); // Release the lock
+        flock($fp, LOCK_UN); // Release lock
         fclose($fp);
         return $servers;
     }
@@ -91,7 +91,7 @@ class Server
         curl_setopt_array($curl, [
             CURLOPT_HTTPHEADER => ["Content-Type: application/json", "Content-Length: " . strlen($json_data)],
             CURLOPT_POSTFIELDS => $json_data,
-            CURLOPT_URL => "https://global.xirsys.net/_turn/YOUR-CHANNEL-NAME",//Replace 'YOUR-CHANNEL-NAME' with the name of your xirsys channel
+            CURLOPT_URL => "https://global.xirsys.net/_turn/YOUR-CHANNEL-NAME",//Replace 'YOUR-CHANNEL-NAME' with name of your xirsys channel
             CURLOPT_USERPWD => "YOUR PASSWORD",
             CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
             CURLOPT_CUSTOMREQUEST => "PUT",

@@ -22,7 +22,7 @@ let timerInterval = null; // Tracks call duration
 
 // Buttons for call control
 const toggleVideoButton = document.getElementById("toggle-video"); // Button to toggle video on/off
-const endCallButton = document.getElementById("end-call"); // Button to end the video call
+const endCallButton = document.getElementById("end-call"); // Button to end video call
 // Video elements
 const localVideoElement = document.getElementById("video-local"); // Local video stream element
 const remoteVideoElement = document.getElementById("video-remote"); // Remote video stream element
@@ -34,15 +34,15 @@ const { room, isOwner } = getRoomAndOwnership();
 window.addEventListener('load', initializeApplication);
 
 function initializeApplication() {
-    setupInitialUI();
+    setupInitialLayout();
     startTimer();
     fetchAdditionalIceServers();
     initializeWebSocket();
     setupButtonEventListeners();
 }
 
-// Configures initial UI
-function setupInitialUI() {
+// Configures initial layout
+function setupInitialLayout() {
     toggleVideoButton.style.display = "none"; // Hide video toggle for caller
     endCallButton.style.margin = "auto"; // Center end call button
 
@@ -182,6 +182,11 @@ function handleIceCandidate(event) {
 function handleRemoteStream(event) {
     const remoteStream = event.streams[0];
     remoteVideoElement.srcObject = remoteStream;
+
+    // Update layout
+    // if (!isOwner) {
+    //     updateRemoteVideoLayout();
+    // }
 }
 
 // Handles changes in ICE connection state
@@ -227,7 +232,7 @@ function setLocalMedia(streamConstraints, isCaller) {
 
             // Add tracks to RTCPeerConnection
             myStream.getTracks().forEach((track) => myPC.addTrack(track, myStream));
-            myMediaStream = myStream; // Save the stream for later use
+            myMediaStream = myStream; // Save stream for later use
 
             // Disable video track for owner initially
             if (isOwner) {
@@ -421,14 +426,14 @@ function toggleVideoStream() {
         const isLocalVideoEnabled = !videoTrack.enabled;
         videoTrack.enabled = isLocalVideoEnabled;
 
-        // Update UI
-        updateToggleVideoButtonUI(isLocalVideoEnabled);
-        updateLocalVideoElementUI(isLocalVideoEnabled);
+        // Update layout
+        updateToggleVideoLayout(isLocalVideoEnabled);
+        updateLocalVideoLayout(isLocalVideoEnabled);
     }
 }
 
-/** Updates the toggle video button UI based on video state */
-function updateToggleVideoButtonUI(isLocalVideoEnabled) {
+/** Updates toggle video button layout based on state */
+function updateToggleVideoLayout(isLocalVideoEnabled) {
     if (isLocalVideoEnabled) {
         toggleVideoButton.classList.add("btn-enabled");
     } else {
@@ -436,14 +441,34 @@ function updateToggleVideoButtonUI(isLocalVideoEnabled) {
     }
 }
 
-/** Updates the toggle video button UI based on video state */
-function updateLocalVideoElementUI(isLocalVideoEnabled) {
+/** Updates local video layout based on state */
+function updateLocalVideoLayout(isLocalVideoEnabled) {
     if (isLocalVideoEnabled) {
         localVideoElement.classList.remove("hidden");
     } else {
         localVideoElement.classList.add("hidden");
     }
 }
+
+/** Updates remote video layout based on state */
+// function updateRemoteVideoLayout() {
+//     console.log("here", remoteVideoElement.srcObject);
+
+//     const hasRemoteStream = remoteVideoElement.srcObject;
+//     console.log("hasRemoteStream", hasRemoteStream)
+//     const remoteVideoTrack = hasRemoteStream ? hasRemoteStream.getVideoTracks()[0] : null;
+//     console.log("remoteVideoTrack", remoteVideoTrack)
+//     const isRemoteVideoEnabled = remoteVideoTrack ? remoteVideoTrack.enabled : false;
+//     console.log("isRemoteVideoEnabled", isRemoteVideoEnabled)
+
+//     if (!isRemoteVideoEnabled) {
+//         console.log("here1");
+//         localVideoElement.classList.add("full-screen");
+//     } else {
+//         console.log("here2");
+//         localVideoElement.classList.remove("full-screen");
+//     }
+// }
 
 // Function to show video button for owner when call starts
 function showVideoButtonForOwner() {
