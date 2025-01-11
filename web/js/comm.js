@@ -488,10 +488,16 @@ function toggleVideoStream() {
 
 // Updates layout by local video state
 function updateLayoutByLocalVideo(isLocalVideoEnabled) {
+    const icon = toggleVideoButton.querySelector("i");
+
     if (isLocalVideoEnabled) {
+        icon.classList.remove("fa-video-slash");
+        icon.classList.add("fa-video-camera");
         toggleVideoButton.classList.add("btn-enabled");
         localVideoElement.style.display = "block";
     } else {
+        icon.classList.remove("fa-video-camera");
+        icon.classList.add("fa-video-slash");
         toggleVideoButton.classList.remove("btn-enabled");
         localVideoElement.style.display = "none";
     }

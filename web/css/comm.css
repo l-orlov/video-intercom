@@ -126,7 +126,6 @@
 }
 
 #end-call:hover {
-    background-color: darkred;
     transform: scale(1.1);
 }
 
@@ -141,8 +140,8 @@
 /* TOGGLE VIDEO BUTTON */
 /* Video off */
 #toggle-video {
-    background-color: #ffffff; /* White background */
-    color: #6C6C6C; /* Gray center */
+    background-color: white; /* White background */
+    color: grey; /* Gray center */
     border: none;
     padding: 20px 30px;
     font-size: 24px;
@@ -154,13 +153,11 @@
 
 /* Video on */
 #toggle-video.btn-enabled {
-    background-color: #6C6C6C; /* Gray background */
-    color: #ffffff; /* White icon */
+    background-color: #564ebf; /* Blue background */
+    color: white; /* White icon */
 }
 
 #toggle-video:hover {
-    background-color: #6C6C6C;
-    color: #ffffff;
     transform: scale(1.1);
 }
 
