@@ -31,22 +31,12 @@ const remoteVideoElement = document.getElementById("video-remote"); // Remote vi
 const { room, isOwner } = getRoomAndOwnership();
 
 window.addEventListener('load', function(){
-    // Initially show only the "End Call" button
-    toggleVideoButton.style.display = "none";
-    endCallButton.style.margin = "auto"; // Center the "End Call" button
+    setupInitialLayout();
+    fetchAdditionalIceServers();
+    startTimer();
 
     wsChat = new WebSocket(`${wsUrl}/`);
-
-    startTimer();//shows the time spent in room
-
-    // Fetch additional ICE servers for fallback and add to default servers
-    fetch(`${appRoot}Server.php`)
-        .then(response => response.json())
-        .then(iceServers => {
-            servers.iceServers = servers.iceServers.concat(iceServers);
-        })
-        .catch(error => console.error("Error fetching ICE servers:", error));
-
+   
     wsChat.onopen = function(){
         //subscribe to room
         wsChat.send(JSON.stringify({
@@ -86,14 +76,15 @@ window.addEventListener('load', function(){
                     break;
                     
                 case 'newSub':
-                    showSnackBar("Remote entered room", 10000);
+                    handleNewSubscriber();
                     break;
-                    
+
                 case 'imOffline':
-                    // Show message
-                    showSnackBar("Remote left room", 10000);
-                    // End call by remote
-                    endCallByRemote();
+                    handleRemoteOffline();
+                    break;
+
+                case 'toggleVideo':
+                    updateLayoutByRemoteVideo(data.isVideoEnabled);
                     break;
             }  
         }
@@ -106,17 +97,38 @@ window.addEventListener('load', function(){
 
     // On click end call
     document.getElementById("end-call").addEventListener('click', function(e){
-        e.preventDefault();
         endCall();
     });
 
     // On click toggle video for owner
     if (isOwner) {
-        document.getElementById("toggle-video").addEventListener("click", function () {
+        toggleVideoButton.addEventListener("click", function () {
             toggleVideoStream();
         });
     }
 });
+
+// Configures initial layout
+function setupInitialLayout() {
+    toggleVideoButton.style.display = "none"; // Hide video toggle
+    endCallButton.style.margin = "auto"; // Center end call button
+
+    if (isOwner) {
+        localVideoElement.style.display = "none"; // Hide local video by default for owner
+    } else {
+        updateLayoutByRemoteVideo(false); // Full-screen local video by default for non-owner
+    }
+}
+
+// Fetches additional ICE servers for fallback and adds them to default list
+function fetchAdditionalIceServers() {
+    fetch(`${appRoot}Server.php`)
+        .then(response => response.json())
+        .then(iceServers => {
+            servers.iceServers = servers.iceServers.concat(iceServers);
+        })
+        .catch(error => console.error("Error fetching ICE servers:", error));
+}
 
 // Extracts room and role from URL parameters and determines ownership
 function getRoomAndOwnership() {
@@ -124,6 +136,20 @@ function getRoomAndOwnership() {
     const room = params.get("room") || "";
     const isOwner = params.get("role") === "owner"; // Determine ownership
     return { room, isOwner };
+}
+
+function handleNewSubscriber() {
+    showSnackBar("Remote joined room.", 10000);
+}
+
+function handleRemoteOffline() {
+    endCallByRemote();
+    showSnackBar("Remote left room.", 10000);
+
+    if (isOwner) {
+        // Update layout
+        updateLayoutByLocalVideo(false);
+    }
 }
 
 function startCall(isCaller){
@@ -418,17 +444,19 @@ function toggleVideoStream() {
     const videoTrack = myMediaStream.getVideoTracks()[0];
 
     if (videoTrack) {
-        // Turn off video by disabling the track
-        videoTrack.enabled = !videoTrack.enabled;
+        // Toggle video track state
+        const isLocalVideoEnabled = !videoTrack.enabled;
+        videoTrack.enabled = isLocalVideoEnabled;
 
-        // Update button UI based on the track's state
-        if (videoTrack.enabled) {
-            toggleVideoButton.classList.add("btn-enabled");
-            showSnackBar("Video enabled", 3000);
-        } else {
-            toggleVideoButton.classList.remove("btn-enabled");
-            showSnackBar("Video disabled", 3000);
-        }
+        // Send toggle video signal
+        wsChat.send(JSON.stringify({
+            action: "toggleVideo",
+            isVideoEnabled: isLocalVideoEnabled,
+            room: room
+        }));
+
+        // Update layout
+        updateLayoutByLocalVideo(isLocalVideoEnabled);
     } else {
         // No video track exists; try to add one
         navigator.mediaDevices.getUserMedia({ video: true })
@@ -447,15 +475,36 @@ function toggleVideoStream() {
                         myPC.addTrack(newVideoTrack, myMediaStream);
                     }
 
-                    // Update the button UI
-                    toggleVideoButton.classList.add("btn-enabled");
-                    showSnackBar("Video enabled", 3000);
+                    // Update layout
+                    updateLayoutByLocalVideo(true);
                 }
             })
             .catch((err) => {
                 console.error("Error accessing video: ", err);
                 showSnackBar("Unable to access video", 5000);
             });
+    }
+}
+
+/** Updates layout by local video state */
+function updateLayoutByLocalVideo(isLocalVideoEnabled) {
+    if (isLocalVideoEnabled) {
+        toggleVideoButton.classList.add("btn-enabled");
+        localVideoElement.style.display = "block";
+    } else {
+        toggleVideoButton.classList.remove("btn-enabled");
+        localVideoElement.style.display = "none";
+    }
+}
+
+/** Updates layout by remote video state */
+function updateLayoutByRemoteVideo(isRemoteVideoEnabled) {
+    if (!isRemoteVideoEnabled) {
+        localVideoElement.classList.add("full-screen");
+        remoteVideoElement.style.display = "none";
+    } else {
+        localVideoElement.classList.remove("full-screen");
+        remoteVideoElement.style.display = "block";
     }
 }
 
