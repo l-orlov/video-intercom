@@ -44,13 +44,13 @@
 
                     return room ? resolve(room) : reject(new Error("Could not create room"));
                 }).then(function(room){
-                    var callerLink = appRoot + "comm.html?room=" + room + "&role=caller";
-                    var calleeLink = appRoot + "comm.html?room=" + room + "&role=callee";
+                    var callLink = appRoot + "comm.html?room=" + room;
+                    var ownerCallLink = appRoot + "comm.html?room=" + room + "&role=owner";
                     
                     linkInput.innerHTML = `
-                        <a href="${callerLink}" target="_blank">Join as Caller</a>
+                        <a href="${callLink}" target="_blank">Join call</a>
                         <br><br>
-                        <a href="${calleeLink}" target="_blank">Join as Callee</a>
+                        <a href="${ownerCallLink}" target="_blank">Join call as owner</a>
                     `;
                 }).catch(function(err){
                     linkInput.innerHTML = err;

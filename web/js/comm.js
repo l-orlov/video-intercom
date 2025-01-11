@@ -24,8 +24,8 @@ let timerInterval = null; // Tracks call duration
 const toggleVideoButton = document.getElementById("toggleVideo");
 const endCallButton = document.getElementById("endCall");
 
-// Get room and role
-const { room, role } = getRoomAndRole();
+// Get room and ownership from query parameters
+const { room, isOwner } = getRoomAndOwnership();
 
 window.addEventListener('load', function(){
     // Initially show only the "End Call" button
@@ -109,20 +109,20 @@ window.addEventListener('load', function(){
         endCall();
     });
 
-    // On click toggle video
-    if (role === "callee") {
+    // On click toggle video for owner
+    if (isOwner) {
         document.getElementById("toggleVideo").addEventListener("click", function () {
             toggleVideoStream();
         });
     }
 });
 
-
-function getRoomAndRole() {
+// Extracts room and role from URL parameters and determines ownership
+function getRoomAndOwnership() {
     const params = new URLSearchParams(window.location.search);
     const room = params.get("room") || "";
-    const role = params.get("role") || "caller"; // Default to caller
-    return { room, role };
+    const isOwner = params.get("role") === "owner"; // Determine ownership
+    return { room, isOwner };
 }
 
 function startCall(isCaller){
@@ -182,9 +182,9 @@ function startCall(isCaller){
         //set local media
         setLocalMedia(streamConstraints, isCaller);
 
-        // Show video button for callee
-        if (role === "callee") {
-            showVideoButtonForCallee();
+        // Show video button for owner
+        if (isOwner) {
+            showVideoButtonForOwner();
         }
     }
     
@@ -218,8 +218,8 @@ function setLocalMedia(streamConstraints, isCaller){
         //set var myMediaStream as the stream gotten. Will be used to remove stream later on
         myMediaStream = myStream;
 
-        // Disable video track initially for callee
-        if (role === "callee") {
+        // Disable video track initially for owner
+        if (isOwner) {
             const videoTrack = myMediaStream.getVideoTracks()[0];
             if (videoTrack) {
                 videoTrack.enabled = false;
@@ -458,9 +458,9 @@ function toggleVideoStream() {
     }
 }
 
-// Function to show the video button for the callee when the call starts
-function showVideoButtonForCallee() {
-    if (role === "callee") {
+// Function to show the video button for owner when call starts
+function showVideoButtonForOwner() {
+    if (isOwner) {
         toggleVideoButton.style.display = "inline-block"; // Show the button
         endCallButton.style.margin = ""; // Reset margin for proper alignment of both buttons
     }
