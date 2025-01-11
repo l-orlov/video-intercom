@@ -486,7 +486,7 @@ function toggleVideoStream() {
     }
 }
 
-/** Updates layout by local video state */
+// Updates layout by local video state
 function updateLayoutByLocalVideo(isLocalVideoEnabled) {
     if (isLocalVideoEnabled) {
         toggleVideoButton.classList.add("btn-enabled");
@@ -497,7 +497,7 @@ function updateLayoutByLocalVideo(isLocalVideoEnabled) {
     }
 }
 
-/** Updates layout by remote video state */
+// Updates layout by remote video state
 function updateLayoutByRemoteVideo(isRemoteVideoEnabled) {
     if (!isRemoteVideoEnabled) {
         localVideoElement.classList.add("full-screen");
