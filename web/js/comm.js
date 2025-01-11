@@ -424,9 +424,6 @@ function toggleVideoStream() {
         // Update UI
         updateToggleVideoButtonUI(isLocalVideoEnabled);
         updateLocalVideoElementUI(isLocalVideoEnabled);
-    } else {
-        // Add video track if none exists
-        addVideoTrackToStream();
     }
 }
 
@@ -446,34 +443,6 @@ function updateLocalVideoElementUI(isLocalVideoEnabled) {
     } else {
         localVideoElement.classList.add("hidden");
     }
-}
-
-// todo: может убрать эту функцию вообще?
-/** Adds a video track to the media stream */
-function addVideoTrackToStream() {
-    navigator.mediaDevices.getUserMedia({ video: true })
-        .then((stream) => {
-            const newVideoTrack = stream.getVideoTracks()[0];
-
-            if (newVideoTrack) {
-                myMediaStream.addTrack(newVideoTrack);
-
-                const sender = myPC.getSenders().find(s => s.track && s.track.kind === "video");
-                if (sender) {
-                    sender.replaceTrack(newVideoTrack);
-                } else {
-                    myPC.addTrack(newVideoTrack, myMediaStream);
-                }
-
-                // Update UI
-                updateToggleVideoButtonUI(true);
-                updateLocalVideoElementUI(true);
-            }
-        })
-        .catch((err) => {
-            console.error("Error accessing video: ", err);
-            showSnackBar("Unable to access video", 5000);
-        });
 }
 
 // Function to show video button for owner when call starts
