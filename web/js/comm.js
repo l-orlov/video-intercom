@@ -20,9 +20,12 @@ let wsChat; // WebSocket connection
 let isUnsubscribed = false; // Tracks subscription status (if true can not start call)
 let timerInterval = null; // Tracks call duration
 
-// Button selectors
-const toggleVideoButton = document.getElementById("toggleVideo");
-const endCallButton = document.getElementById("endCall");
+// Buttons for call control
+const toggleVideoButton = document.getElementById("toggleVideo"); // Button to toggle video on/off
+const endCallButton = document.getElementById("endCall"); // Button to end the video call
+// Video elements
+const localVideoElement = document.getElementById("myVid"); // Local video stream element
+const remoteVideoElement = document.getElementById("peerVid"); // Remote video stream element
 
 // Get room and ownership from query parameters
 const { room, isOwner } = getRoomAndOwnership();
@@ -42,6 +45,10 @@ function initializeApplication() {
 function setupInitialUI() {
     toggleVideoButton.style.display = "none"; // Hide video toggle for caller
     endCallButton.style.margin = "auto"; // Center end call button
+
+    if (isOwner) {
+        localVideoElement.classList.add("hidden"); // Hide local video by default for owner
+    }
 }
 
 // Fetches additional ICE servers for fallback and adds them to default list
@@ -174,7 +181,7 @@ function handleIceCandidate(event) {
 // Handles addition of a remote stream
 function handleRemoteStream(event) {
     const remoteStream = event.streams[0];
-    document.getElementById("peerVid").srcObject = remoteStream;
+    remoteVideoElement.srcObject = remoteStream;
 }
 
 // Handles changes in ICE connection state
@@ -216,7 +223,7 @@ function setLocalMedia(streamConstraints, isCaller) {
             }
 
             // Attach stream to local video element
-            document.getElementById("myVid").srcObject = myStream;
+            localVideoElement.srcObject = myStream;
 
             // Add tracks to RTCPeerConnection
             myStream.getTracks().forEach((track) => myPC.addTrack(track, myStream));
@@ -358,8 +365,8 @@ function endCall(){
     stopMediaStream();
 
     // Clear video elements
-    document.getElementById("myVid").srcObject = null; // Clear local video
-    document.getElementById("peerVid").srcObject = null; // Clear remote video
+    localVideoElement.srcObject = null; // Clear local video
+    remoteVideoElement.srcObject = null; // Clear remote video
 
     // Unsubscribe from room
     wsChat.send(JSON.stringify({
@@ -386,8 +393,8 @@ function endCallByRemote(){
     stopMediaStream();
 
     // Clear video elements
-    document.getElementById("myVid").srcObject = null; // Clear local video
-    document.getElementById("peerVid").srcObject = null; // Clear remote video
+    localVideoElement.srcObject = null; // Clear local video
+    remoteVideoElement.srcObject = null; // Clear remote video
 
     // Notify that call ended by remote
     showSnackBar("Call ended by remote", 10000);
@@ -411,14 +418,12 @@ function toggleVideoStream() {
 
     if (videoTrack) {
         // Toggle video track state
-        const isEnabled = !videoTrack.enabled;
-        videoTrack.enabled = isEnabled;
+        const isLocalVideoEnabled = !videoTrack.enabled;
+        videoTrack.enabled = isLocalVideoEnabled;
 
         // Update UI
-        updateVideoButtonUI(isEnabled);
-        showSnackBar(`Video ${isEnabled ? "enabled" : "disabled"}`, 3000);
-
-        console.log(`Video track ${isEnabled ? "enabled" : "disabled"}`);
+        updateToggleVideoButtonUI(isLocalVideoEnabled);
+        updateLocalVideoElementUI(isLocalVideoEnabled);
     } else {
         // Add video track if none exists
         addVideoTrackToStream();
@@ -426,16 +431,24 @@ function toggleVideoStream() {
 }
 
 /** Updates the toggle video button UI based on video state */
-function updateVideoButtonUI(isEnabled) {
-    if (isEnabled) {
+function updateToggleVideoButtonUI(isLocalVideoEnabled) {
+    if (isLocalVideoEnabled) {
         toggleVideoButton.classList.add("btn-enabled");
-        toggleVideoButton.classList.remove("btn-disabled");
     } else {
         toggleVideoButton.classList.remove("btn-enabled");
-        toggleVideoButton.classList.add("btn-disabled");
     }
 }
 
+/** Updates the toggle video button UI based on video state */
+function updateLocalVideoElementUI(isLocalVideoEnabled) {
+    if (isLocalVideoEnabled) {
+        localVideoElement.classList.remove("hidden");
+    } else {
+        localVideoElement.classList.add("hidden");
+    }
+}
+
+// todo: может убрать эту функцию вообще?
 /** Adds a video track to the media stream */
 function addVideoTrackToStream() {
     navigator.mediaDevices.getUserMedia({ video: true })
@@ -453,10 +466,8 @@ function addVideoTrackToStream() {
                 }
 
                 // Update UI
-                updateVideoButtonUI(true);
-                showSnackBar("Video enabled", 3000);
-
-                console.log("New video track added and enabled.");
+                updateToggleVideoButtonUI(true);
+                updateLocalVideoElementUI(true);
             }
         })
         .catch((err) => {
