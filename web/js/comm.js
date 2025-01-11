@@ -20,9 +20,12 @@ let wsChat; // WebSocket connection
 let isUnsubscribed = false; // Tracks subscription status (if true can not start call)
 let timerInterval = null; // Tracks call duration
 
-// Button selectors
-const toggleVideoButton = document.getElementById("toggleVideo");
-const endCallButton = document.getElementById("endCall");
+// Buttons for call control
+const toggleVideoButton = document.getElementById("toggle-video"); // Button to toggle video on/off
+const endCallButton = document.getElementById("end-call"); // Button to end video call
+// Video elements
+const localVideoElement = document.getElementById("video-local"); // Local video stream element
+const remoteVideoElement = document.getElementById("video-remote"); // Remote video stream element
 
 // Get room and ownership from query parameters
 const { room, isOwner } = getRoomAndOwnership();
@@ -48,7 +51,8 @@ window.addEventListener('load', function(){
         //subscribe to room
         wsChat.send(JSON.stringify({
             action: 'subscribe',
-            room: room
+            room: room,
+            isOwner: isOwner
         }));
         
         showSnackBar("Connected to the ws server!", 5000);
@@ -74,18 +78,15 @@ window.addEventListener('load', function(){
                 case 'candidate':
                     //message is iceCandidate
                     myPC ? myPC.addIceCandidate(new RTCIceCandidate(data.candidate)) : "";
-                    
                     break;
 
                 case 'sdp':
                     //message is signal description
                     myPC ? myPC.setRemoteDescription(new RTCSessionDescription(data.sdp)) : "";
-
                     break;
                     
                 case 'newSub':
                     showSnackBar("Remote entered room", 10000);
-                    
                     break;
                     
                 case 'imOffline':
@@ -104,14 +105,14 @@ window.addEventListener('load', function(){
     };
 
     // On click end call
-    document.getElementById("endCall").addEventListener('click', function(e){
+    document.getElementById("end-call").addEventListener('click', function(e){
         e.preventDefault();
         endCall();
     });
 
     // On click toggle video for owner
     if (isOwner) {
-        document.getElementById("toggleVideo").addEventListener("click", function () {
+        document.getElementById("toggle-video").addEventListener("click", function () {
             toggleVideoStream();
         });
     }
@@ -149,7 +150,7 @@ function startCall(isCaller){
         //When remote stream becomes available
         myPC.ontrack = function(e){
             const stream = e.streams[0];
-            document.getElementById("peerVid").srcObject = stream;
+            remoteVideoElement.srcObject = stream;
         };
         
         //when remote connection state and ice agent is closed
@@ -208,7 +209,7 @@ function setLocalMedia(streamConstraints, isCaller){
             return;
         }
         
-        document.getElementById("myVid").srcObject = myStream;
+        localVideoElement.srcObject = myStream;
         
         //add my stream to RTCPeerConnection
         myStream.getTracks().forEach((track)=>{
@@ -365,8 +366,8 @@ function endCall(){
     stopMediaStream();
 
     // Clear video elements
-    document.getElementById("myVid").srcObject = null; // Clear local video
-    document.getElementById("peerVid").srcObject = null; // Clear remote video
+    localVideoElement.srcObject = null; // Clear local video
+    remoteVideoElement.srcObject = null; // Clear remote video
 
     // Unsubscribe from room
     wsChat.send(JSON.stringify({
@@ -393,8 +394,8 @@ function endCallByRemote(){
     stopMediaStream();
 
     // Clear video elements
-    document.getElementById("myVid").srcObject = null; // Clear local video
-    document.getElementById("peerVid").srcObject = null; // Clear remote video
+    localVideoElement.srcObject = null; // Clear local video
+    remoteVideoElement.srcObject = null; // Clear remote video
 
     // Notify that call ended by remote
     showSnackBar("Call ended by remote", 10000);
