@@ -5,3 +5,4 @@ config.js
 cached_ice_servers.json
 baileys_auth_info
 wa-logs.txt
+qr.png
