@@ -6,10 +6,10 @@ const {
     useMultiFileAuthState,
 } = require('@whiskeysockets/baileys');
 
-const INTERVAL = 1000; // Интервал в миллисекундах для вычитывания сообщений
+const INTERVAL = 1000; // Интервал для вычитывания сообщений
+const BATCH_SIZE = 500; // Количество сообщений для обработки за раз
 const SENDING_TIMEOUT = 60000; // Тайм-аут для обработки сообщений (в миллисекундах)
 
-// Настройки подключения к MySQL
 const dbConfig = {
     host: 'localhost',
     user: 'your_user',
@@ -17,44 +17,48 @@ const dbConfig = {
     database: 'your_database',
 };
 
-/*
-CREATE TABLE messages (
-    id INT AUTO_INCREMENT PRIMARY KEY, -- Уникальный идентификатор сообщения
-    content TEXT NOT NULL,             -- Текст сообщения
-    recipient VARCHAR(255) NOT NULL,   -- Получатель сообщения (например, номер телефона в формате WhatsApp: '5491168271180@s.whatsapp.net')
-    status ENUM('pending', 'sending', 'sent') NOT NULL DEFAULT 'pending', -- Статус сообщения
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, -- Время создания записи
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Время последнего обновления
-);
-*/
-
 const startSock = async () => {
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
-
     const sock = makeWASocket({
         printQRInTerminal: false,
         auth: state,
     });
 
-    // Подключение к MySQL
     const db = await mysql.createConnection(dbConfig);
 
-    const sendMessage = async (msg, jid, msgId) => {
-        try {
-            await sock.sendMessage(jid, { text: msg });
-            console.log(`Sent message: "${msg}" to ${jid}`);
-            // Обновляем статус сообщения на 'sent'
-            await db.execute('UPDATE messages SET status = ? WHERE id = ?', ['sent', msgId]);
-        } catch (err) {
-            console.error(`Failed to send message "${msg}" to ${jid}:`, err);
-            // Если отправка не удалась, возвращаем статус на 'pending'
-            await db.execute('UPDATE messages SET status = ? WHERE id = ?', ['pending', msgId]);
+    const sendMessagesBatch = async (messages) => {
+        const successfulIds = [];
+        const failedIds = [];
+
+        for (const msg of messages) {
+            try {
+                await sock.sendMessage(msg.recipient, { text: msg.content });
+                console.log(`Sent message: "${msg.content}" to ${msg.recipient}`);
+                successfulIds.push(msg.id);
+            } catch (err) {
+                console.error(`Failed to send message "${msg.content}" to ${msg.recipient}:`, err);
+                failedIds.push(msg.id);
+            }
+        }
+
+        // Обновляем статусы в базе данных
+        if (successfulIds.length > 0) {
+            await db.execute(
+                `UPDATE messages SET status = 'sent', updated_at = NOW() WHERE id IN (?)`,
+                [successfulIds]
+            );
+        }
+
+        if (failedIds.length > 0) {
+            await db.execute(
+                `UPDATE messages SET status = 'pending', updated_at = NOW() WHERE id IN (?)`,
+                [failedIds]
+            );
         }
     };
 
     const processMessages = async () => {
         try {
-            // Начинаем транзакцию
             await db.beginTransaction();
 
             // Переводим зависшие сообщения обратно в 'pending'
@@ -63,32 +67,30 @@ const startSock = async () => {
                 [SENDING_TIMEOUT / 1000]
             );
 
-            // Выбираем сообщения со статусом 'pending'
+            // Выбираем сообщения для обработки
             const [rows] = await db.execute(
-                `SELECT * FROM messages WHERE status = 'pending' ORDER BY created_at LIMIT 10 FOR UPDATE`
+                `SELECT * FROM messages WHERE status = 'pending' ORDER BY created_at LIMIT ? FOR UPDATE`,
+                [BATCH_SIZE]
             );
 
             if (rows.length === 0) {
-                await db.commit(); // Завершаем транзакцию
+                await db.commit();
                 return;
             }
 
-            // Обновляем статус сообщений на 'sending'
             const messageIds = rows.map((row) => row.id);
             await db.execute(
                 `UPDATE messages SET status = 'sending', updated_at = NOW() WHERE id IN (?)`,
                 [messageIds]
             );
 
-            await db.commit(); // Завершаем транзакцию
+            await db.commit();
 
-            // Отправляем сообщения
-            for (const msg of rows) {
-                await sendMessage(msg.content, msg.recipient, msg.id);
-            }
+            // Отправляем сообщения батчем
+            await sendMessagesBatch(rows);
         } catch (err) {
             console.error('Error processing messages:', err);
-            await db.rollback(); // Откатываем транзакцию в случае ошибки
+            await db.rollback();
         }
     };
 
@@ -116,7 +118,7 @@ const startSock = async () => {
 
             if (connection === 'open') {
                 console.log('Connection opened. Starting message processing...');
-                setInterval(processMessages, INTERVAL); // Запускаем обработку сообщений каждые INTERVAL миллисекунд
+                setInterval(processMessages, INTERVAL);
             }
         }
 
