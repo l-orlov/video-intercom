@@ -5,10 +5,11 @@ const {
     DisconnectReason,
     useMultiFileAuthState,
 } = require('@whiskeysockets/baileys');
+const { v4: uuidv4 } = require('uuid'); // For generating UUIDs
 
-const INTERVAL = 1000; // Интервал для вычитывания сообщений
-const BATCH_SIZE = 500; // Количество сообщений для обработки за раз
-const SENDING_TIMEOUT = 60000; // Тайм-аут для обработки сообщений (в миллисекундах)
+const INTERVAL = 1000; // Interval for fetching messages (in milliseconds)
+const BATCH_SIZE = 500; // Number of messages to process at a time
+const SENDING_TIMEOUT = 60000; // Timeout for processing messages (in milliseconds)
 
 const dbConfig = {
     host: 'localhost',
@@ -20,7 +21,7 @@ const dbConfig = {
 const startSock = async () => {
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
     const sock = makeWASocket({
-        printQRInTerminal: false,
+        printQRInTerminal: false, // Disable QR code printing in the terminal
         auth: state,
     });
 
@@ -41,7 +42,7 @@ const startSock = async () => {
             }
         }
 
-        // Обновляем статусы в базе данных
+        // Update message statuses in the database
         if (successfulIds.length > 0) {
             await db.execute(
                 `UPDATE messages SET status = 'sent', updated_at = NOW() WHERE id IN (?)`,
@@ -61,13 +62,13 @@ const startSock = async () => {
         try {
             await db.beginTransaction();
 
-            // Переводим зависшие сообщения обратно в 'pending'
+            // Reset stuck messages back to 'pending'
             await db.execute(
                 `UPDATE messages SET status = 'pending' WHERE status = 'sending' AND TIMESTAMPDIFF(SECOND, updated_at, NOW()) > ?`,
                 [SENDING_TIMEOUT / 1000]
             );
 
-            // Выбираем сообщения для обработки
+            // Fetch messages for processing
             const [rows] = await db.execute(
                 `SELECT * FROM messages WHERE status = 'pending' ORDER BY created_at LIMIT ? FOR UPDATE`,
                 [BATCH_SIZE]
@@ -86,7 +87,7 @@ const startSock = async () => {
 
             await db.commit();
 
-            // Отправляем сообщения батчем
+            // Send messages in a batch
             await sendMessagesBatch(rows);
         } catch (err) {
             console.error('Error processing messages:', err);
@@ -102,7 +103,7 @@ const startSock = async () => {
             if (qr) {
                 console.log('QR code received. Saving to file...');
                 try {
-                    await QRCode.toFile('./qr.png', qr);
+                    await QRCode.toFile('./qr.png', qr); // Save QR code to a file
                     console.log('QR code saved to qr.png');
                 } catch (err) {
                     console.error('Failed to save QR code:', err);
@@ -123,11 +124,21 @@ const startSock = async () => {
         }
 
         if (events['creds.update']) {
-            await saveCreds();
+            await saveCreds(); // Save credentials after updates
         }
     });
 
     return sock;
+};
+
+// Example of adding a new message to the database
+const addMessage = async (content, recipient) => {
+    const id = uuidv4(); // Generate a UUID
+    await db.execute(
+        'INSERT INTO messages (id, content, recipient, status) VALUES (?, ?, ?, ?)',
+        [id, content, recipient, 'pending']
+    );
+    console.log(`Message with ID ${id} added.`);
 };
 
 startSock();
