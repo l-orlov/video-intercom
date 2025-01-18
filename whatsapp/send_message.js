@@ -1,6 +1,5 @@
 const { Boom } = require('@hapi/boom');
 const NodeCache = require('node-cache');
-const readline = require('readline');
 const {
     default: makeWASocket,
     DisconnectReason,
@@ -16,13 +15,10 @@ const P = require('pino');
 const logger = P({ timestamp: () => `,"time":"${new Date().toJSON()}"` }, P.destination('./wa-logs.txt'));
 logger.level = 'trace';
 
-const useStore = !process.argv.includes('--no-store');
-const usePairingCode = process.argv.includes('--use-pairing-code');
+const useStore = false;
+const myNumber = '5491168271180@s.whatsapp.net';
+let counter = 1;
 
-// External cache for message retries
-const msgRetryCounterCache = new NodeCache();
-
-// Memory store for connection data
 const store = useStore ? makeInMemoryStore({ logger }) : undefined;
 if (store) {
     store.readFromFile('./baileys_store_multi.json');
@@ -37,23 +33,35 @@ const startSock = async () => {
     const sock = makeWASocket({
         version,
         logger,
-        printQRInTerminal: !usePairingCode,
+        printQRInTerminal: true,
         auth: {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, logger),
         },
-        msgRetryCounterCache,
     });
 
     if (store) store.bind(sock.ev);
 
-    const sendMessageWTyping = async (msg, jid) => {
+    const sendMessage = async (msg, jid) => {
         try {
-            await sock.sendMessage(jid, msg);
-            console.log(`Sent message: "${msg.text}" to ${jid}`);
+            await sock.sendMessage(jid, { text: msg });
+            console.log(`Sent message: "${msg}" to ${jid}`);
         } catch (err) {
             console.error('Failed to send message:', err);
         }
+    };
+
+    // Send message each second
+    const startSendingMessages = () => {
+        const interval = setInterval(async () => {
+            if (counter > 40) {
+                clearInterval(interval); // Stop after 40 messages
+                console.log('Finished sending all messages.');
+                return;
+            }
+            await sendMessage(`Number: ${counter}`, myNumber);
+            counter++;
+        }, 1000); // Each second
     };
 
     sock.ev.process(async (events) => {
@@ -66,29 +74,16 @@ const startSock = async () => {
                 else console.log('Connection closed. You are logged out.');
             }
             console.log('Connection update:', update);
+
+            // После успешного подключения начинаем отправку сообщений
+            if (connection === 'open') {
+                console.log('Connection opened. Starting message sending...');
+                startSendingMessages();
+            }
         }
 
         if (events['creds.update']) {
             await saveCreds();
-        }
-
-        if (events['messages.upsert']) {
-            const upsert = events['messages.upsert'];
-            console.log('Received messages:', JSON.stringify(upsert, null, 2));
-
-            if (upsert.type === 'notify') {
-                for (const msg of upsert.messages) {
-                    if (!msg.key.fromMe) {
-                        const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
-                        if (text) {
-                            console.log(`Received message: "${text}" from ${msg.key.remoteJid}`);
-                            await sendMessageWTyping({ text: `Hello! You said: "${text}"` }, msg.key.remoteJid);
-                        } else {
-                            console.log('Received a non-text message, ignoring.');
-                        }
-                    }
-                }
-            }
         }
     });
 

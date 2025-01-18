@@ -3,3 +3,5 @@ config.js
 /vendor/
 *node_modules*
 cached_ice_servers.json
+baileys_auth_info
+wa-logs.txt
