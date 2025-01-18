@@ -1,0 +1,21 @@
+docker-compose up -d
+
+docker exec -it mysql_container mysql -u root -p
+
+enter: rootpassword
+
+USE db;
+
+CREATE TABLE messages (
+    id CHAR(36) PRIMARY KEY,
+    content TEXT NOT NULL,
+    recipient VARCHAR(255) NOT NULL,
+    status ENUM('pending', 'sending', 'sent') NOT NULL DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+CREATE INDEX messages_status_created_at_idx ON messages(status, created_at);
+CREATE INDEX messages_status_updated_at_idx ON messages(status, updated_at);
+
+node add_message.js "5491168271180@s.whatsapp.net" "Hello"
+node add_message.js "79179397558@s.whatsapp.net" "Hello"

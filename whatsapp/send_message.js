@@ -5,7 +5,6 @@ const {
     DisconnectReason,
     useMultiFileAuthState,
 } = require('@whiskeysockets/baileys');
-const { v4: uuidv4 } = require('uuid'); // For generating UUIDs
 
 const INTERVAL = 1000; // Interval for fetching messages (in milliseconds)
 const BATCH_SIZE = 500; // Number of messages to process at a time
@@ -13,9 +12,10 @@ const SENDING_TIMEOUT = 60000; // Timeout for processing messages (in millisecon
 
 const dbConfig = {
     host: 'localhost',
-    user: 'your_user',
-    password: 'your_password',
-    database: 'your_database',
+    port: 3306,
+    user: 'user',
+    password: 'password',
+    database: 'db',
 };
 
 const startSock = async () => {
@@ -44,16 +44,18 @@ const startSock = async () => {
 
         // Update message statuses in the database
         if (successfulIds.length > 0) {
+            const placeholders = successfulIds.map(() => '?').join(',');
             await db.execute(
-                `UPDATE messages SET status = 'sent', updated_at = NOW() WHERE id IN (?)`,
-                [successfulIds]
+                `UPDATE messages SET status = 'sent', updated_at = NOW() WHERE id IN (${placeholders})`,
+                successfulIds
             );
         }
 
         if (failedIds.length > 0) {
+            const placeholders = failedIds.map(() => '?').join(',');
             await db.execute(
-                `UPDATE messages SET status = 'pending', updated_at = NOW() WHERE id IN (?)`,
-                [failedIds]
+                `UPDATE messages SET status = 'pending', updated_at = NOW() WHERE id IN (${placeholders})`,
+                failedIds
             );
         }
     };
@@ -70,8 +72,7 @@ const startSock = async () => {
 
             // Fetch messages for processing
             const [rows] = await db.execute(
-                `SELECT * FROM messages WHERE status = 'pending' ORDER BY created_at LIMIT ? FOR UPDATE`,
-                [BATCH_SIZE]
+                `SELECT * FROM messages WHERE status = 'pending' ORDER BY created_at LIMIT ${BATCH_SIZE} FOR UPDATE`
             );
 
             if (rows.length === 0) {
@@ -80,9 +81,11 @@ const startSock = async () => {
             }
 
             const messageIds = rows.map((row) => row.id);
+            
+            const placeholders = messageIds.map(() => '?').join(',');
             await db.execute(
-                `UPDATE messages SET status = 'sending', updated_at = NOW() WHERE id IN (?)`,
-                [messageIds]
+                `UPDATE messages SET status = 'sending', updated_at = NOW() WHERE id IN (${placeholders})`,
+                messageIds
             );
 
             await db.commit();
@@ -129,16 +132,6 @@ const startSock = async () => {
     });
 
     return sock;
-};
-
-// Example of adding a new message to the database
-const addMessage = async (content, recipient) => {
-    const id = uuidv4(); // Generate a UUID
-    await db.execute(
-        'INSERT INTO messages (id, content, recipient, status) VALUES (?, ?, ?, ?)',
-        [id, content, recipient, 'pending']
-    );
-    console.log(`Message with ID ${id} added.`);
 };
 
 startSock();
