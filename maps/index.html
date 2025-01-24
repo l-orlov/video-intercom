@@ -117,6 +117,9 @@
                 <label for="buildingNumber">Enter Building Number</label>
                 <input type="text" id="buildingNumber" name="buildingNumber" placeholder="Enter building number" readonly />
 
+                <label for="postalCode">Postal Code</label>
+                <input type="text" id="postalCode" name="postalCode" placeholder="Postal code" readonly />
+
                 <label for="fullAddress">Select Address:</label>
                 <div id="addressContainer">
                     <input type="text" id="fullAddress" name="fullAddress" placeholder="Auto-complete address" />
@@ -182,6 +185,7 @@
                         document.querySelector("#city").value = address.city || address.town || address.village || "";
                         document.querySelector("#street").value = address.road || "";
                         document.querySelector("#buildingNumber").value = address.house_number || "";
+                        document.querySelector("#postalCode").value = address.postcode || "";
 
                         suggestionsList.innerHTML = ""; // Clear suggestions
 
