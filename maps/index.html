@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Address Auto-Complete with Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            max-width: 500px;
+        }
+
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        input {
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #addressContainer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #suggestions {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #ccc;
+            max-height: 200px;
+            overflow-y: auto;
+            position: absolute;
+            background-color: white;
+            z-index: 1000;
+            width: calc(100% - 22px);
+        }
+
+        #suggestions li {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        #suggestions li:hover {
+            background-color: #f0f0f0;
+        }
+
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .form-container {
+            flex: 1;
+        }
+
+        .map-container {
+            flex: 1;
+        }
+
+        /* To hide leaflet logo */
+        .leaflet-control-attribution {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Address Auto-Complete with Map</h1>
+
+    <div class="container">
+        <div class="form-container">
+            <form>
+                <label for="province">Enter Province</label>
+                <input type="text" id="province" name="province" placeholder="Enter province" readonly />
+
+                <label for="city">Enter City</label>
+                <input type="text" id="city" name="city" placeholder="Enter city" readonly />
+
+                <label for="street">Enter Street</label>
+                <input type="text" id="street" name="street" placeholder="Enter street" readonly />
+
+                <label for="buildingNumber">Enter Building Number</label>
+                <input type="text" id="buildingNumber" name="buildingNumber" placeholder="Enter building number" readonly />
+
+                <label for="fullAddress">Select Address:</label>
+                <div id="addressContainer">
+                    <input type="text" id="fullAddress" name="fullAddress" placeholder="Auto-complete address" />
+                    <button type="button" id="searchButton">Search</button>
+                </div>
+                <ul id="suggestions"></ul>
+            </form>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([-34.6037, -58.3816], 12); // Default to Buenos Aires
+
+        // Add base layer to the map
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Marker for the selected address
+        let marker = null;
+
+        // Search button functionality
+        document.querySelector("#searchButton").addEventListener("click", async function () {
+            const query = document.querySelector("#fullAddress").value.trim();
+            const suggestionsList = document.querySelector("#suggestions");
+
+            // Clear previous suggestions
+            suggestionsList.innerHTML = "";
+
+            if (query.length < 3) {
+                alert("Please enter at least 3 characters.");
+                return;
+            }
+
+            // Find address only for Argentina
+            const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}&viewbox=-73.58297,-21.77989,-53.63691,-55.06131&bounded=1`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    alert("No results found for the entered address.");
+                    return;
+                }
+
+                // Display suggestions
+                data.forEach((item) => {
+                    const li = document.createElement("li");
+                    li.textContent = item.display_name;
+                    li.addEventListener("click", () => {
+                        document.querySelector("#fullAddress").value = item.display_name;
+
+                        // Automatically fill other fields
+                        const address = item.address;
+                        document.querySelector("#province").value = address.state || "";
+                        document.querySelector("#city").value = address.city || address.town || address.village || "";
+                        document.querySelector("#street").value = address.road || "";
+                        document.querySelector("#buildingNumber").value = address.house_number || "";
+
+                        suggestionsList.innerHTML = ""; // Clear suggestions
+
+                        // Update map and marker
+                        const lat = parseFloat(item.lat);
+                        const lon = parseFloat(item.lon);
+
+                        if (marker) {
+                            marker.setLatLng([lat, lon]);
+                        } else {
+                            marker = L.marker([lat, lon]).addTo(map);
+                        }
+
+                        map.setView([lat, lon], 16); // Center map to the selected address
+                    });
+                    suggestionsList.appendChild(li);
+                });
+            } catch (error) {
+                console.error("Error fetching data from Nominatim:", error);
+                alert("An error occurred. Please try again later.");
+            }
+        });
+    </script>
+</body>
+</html>
