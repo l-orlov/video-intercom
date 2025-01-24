@@ -157,8 +157,8 @@
                 return;
             }
 
-            // Find address only for Argentina
-            const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}&viewbox=-73.58297,-21.77989,-53.63691,-55.06131&bounded=1`;
+            // Include `countrycodes=ar` to limit results to Argentina
+            const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}&countrycodes=ar`;
 
             try {
                 const response = await fetch(url);
