@@ -10,31 +10,29 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
-        }
-
-        form {
             display: flex;
             flex-direction: column;
-            max-width: 500px;
+            align-items: center;
         }
 
-        label {
-            font-weight: bold;
-            margin-top: 10px;
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #findAddressContainer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            position: relative;
         }
 
         input {
             padding: 10px;
-            margin-top: 5px;
-            margin-bottom: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
-        }
-
-        #addressContainer {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            width: 300px;
         }
 
         button {
@@ -55,42 +53,59 @@
             padding: 0;
             margin: 0;
             border: 1px solid #ccc;
+            background-color: white;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 300px;
             max-height: 200px;
             overflow-y: auto;
-            position: absolute;
-            background-color: white;
             z-index: 1000;
-            width: calc(100% - 22px);
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         #suggestions li {
-            padding: 8px;
+            padding: 10px;
             cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
         }
 
         #suggestions li:hover {
-            background-color: #f0f0f0;
+            background-color: #f7f7f7;
+        }
+
+        .container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+            align-self: flex-start;
+        }
+
+        input[readonly] {
+            background-color: #f9f9f9;
         }
 
         #map {
             height: 400px;
             width: 100%;
+            max-width: 500px;
             margin-top: 20px;
             border: 1px solid #ccc;
             border-radius: 4px;
-        }
-
-        .container {
-            display: flex;
-            gap: 20px;
-        }
-
-        .form-container {
-            flex: 1;
-        }
-
-        .map-container {
-            flex: 1;
         }
 
         /* To hide leaflet logo */
@@ -102,50 +117,45 @@
 <body>
     <h1>Address Auto-Complete with Map</h1>
 
-    <div class="container">
-        <div class="form-container">
-            <form>
-                <label for="province">Enter Province</label>
-                <input type="text" id="province" name="province" placeholder="Enter province" readonly />
+    <!-- Search field and button -->
+    <div id="findAddressContainer">
+        <input type="text" id="fullAddress" name="fullAddress" placeholder="Enter an address to search" />
+        <button type="button" id="searchButton">Search</button>
+        <ul id="suggestions"></ul>
+    </div>
 
-                <label for="city">Enter City</label>
-                <input type="text" id="city" name="city" placeholder="Enter city" readonly />
+    <!-- Container for address data and map -->
+    <div class="container" id="addressDataContainer">
+        <form>
+            <label for="province">Province</label>
+            <input type="text" id="province" name="province" placeholder="Province" readonly />
 
-                <label for="street">Enter Street</label>
-                <input type="text" id="street" name="street" placeholder="Enter street" readonly />
+            <label for="city">City</label>
+            <input type="text" id="city" name="city" placeholder="City" readonly />
 
-                <label for="buildingNumber">Enter Building Number</label>
-                <input type="text" id="buildingNumber" name="buildingNumber" placeholder="Enter building number" readonly />
+            <label for="street">Street</label>
+            <input type="text" id="street" name="street" placeholder="Street" readonly />
 
-                <label for="postalCode">Postal Code</label>
-                <input type="text" id="postalCode" name="postalCode" placeholder="Postal code" readonly />
+            <label for="buildingNumber">Building Number</label>
+            <input type="text" id="buildingNumber" name="buildingNumber" placeholder="Building number" readonly />
 
-                <label for="fullAddress">Select Address:</label>
-                <div id="addressContainer">
-                    <input type="text" id="fullAddress" name="fullAddress" placeholder="Auto-complete address" />
-                    <button type="button" id="searchButton">Search</button>
-                </div>
-                <ul id="suggestions"></ul>
-            </form>
-        </div>
+            <label for="postalCode">Postal Code</label>
+            <input type="text" id="postalCode" name="postalCode" placeholder="Postal code" readonly />
+        </form>
 
-        <div class="map-container">
-            <div id="map"></div>
-        </div>
+        <div id="map"></div>
     </div>
 
     <script>
-        // Initialize the map
-        const map = L.map('map').setView([-34.6037, -58.3816], 12); // Default to Buenos Aires
-
-        // Add base layer to the map
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        // Marker for the selected address
+        // Marker and map variables
+        let map = null;
         let marker = null;
+
+        // Hide address data and map container on input change
+        document.querySelector("#fullAddress").addEventListener("input", () => {
+            const addressContainer = document.querySelector("#addressDataContainer");
+            addressContainer.style.display = "none"; // Hide the container
+        });
 
         // Search button functionality
         document.querySelector("#searchButton").addEventListener("click", async function () {
@@ -167,13 +177,21 @@
                 const response = await fetch(url);
                 const data = await response.json();
 
-                if (data.length === 0) {
-                    alert("No results found for the entered address.");
+                // Filter results to include only those with house numbers
+                const filteredData = data.filter(item => item.address && item.address.house_number);
+
+                if (filteredData.length === 0) {
+                    // If no results with house numbers, show a message
+                    const noResultMessage = document.createElement("li");
+                    noResultMessage.textContent = "Please provide an address that includes a house number.";
+                    noResultMessage.style.color = "red";
+                    noResultMessage.style.fontStyle = "italic";
+                    suggestionsList.appendChild(noResultMessage);
                     return;
                 }
 
-                // Display suggestions
-                data.forEach((item) => {
+                // Display filtered suggestions
+                filteredData.forEach((item) => {
                     const li = document.createElement("li");
                     li.textContent = item.display_name;
                     li.addEventListener("click", () => {
@@ -187,7 +205,18 @@
                         document.querySelector("#buildingNumber").value = address.house_number || "";
                         document.querySelector("#postalCode").value = address.postcode || "";
 
-                        suggestionsList.innerHTML = ""; // Clear suggestions
+                        // Show the container with data and map
+                        const addressContainer = document.querySelector("#addressDataContainer");
+                        addressContainer.style.display = "flex";
+
+                        // Initialize map if it hasn't been created yet
+                        if (!map) {
+                            map = L.map('map').setView([0, 0], 16); // Placeholder initialization
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                maxZoom: 19,
+                                attribution: '© OpenStreetMap contributors'
+                            }).addTo(map);
+                        }
 
                         // Update map and marker
                         const lat = parseFloat(item.lat);
@@ -200,6 +229,13 @@
                         }
 
                         map.setView([lat, lon], 16); // Center map to the selected address
+
+                        // Fix map rendering issue
+                        setTimeout(() => {
+                            map.invalidateSize();
+                        }, 100);
+
+                        suggestionsList.innerHTML = ""; // Clear suggestions
                     });
                     suggestionsList.appendChild(li);
                 });
